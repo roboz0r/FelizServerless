@@ -6,44 +6,128 @@ open Elmish
 open Feliz.UseElmish
 open Feliz.MaterialUI
 
-type State = { CurrentUrl : string list
-               Counter : Counter.State      }
 
-type Msg = UrlChanged of string list
+type State =
+    { CurrentUrl: string list
+      Counter: Counter.State
+      ShowDrawer: bool }
 
-let init() = 
-    let counter, cmd = Counter.init()
-    { CurrentUrl = Router.currentUrl(); Counter = counter }, Cmd.batch [cmd]
+type Msg =
+    | UrlChanged of string list
+    | ToggleDrawer
+    | Counter of Counter.Msg
 
-let update (UrlChanged segments) state =
-    { state with CurrentUrl = segments }, Cmd.none
+let init () =
+    let counter, cmd = Counter.init ()
+
+    { CurrentUrl = Router.currentUrl ()
+      Counter = counter
+      ShowDrawer = true },
+    Cmd.batch [ cmd ]
+
+let update msg state =
+    match msg with
+    | (UrlChanged segments) -> { state with CurrentUrl = segments }, Cmd.none
+    | ToggleDrawer ->
+        { state with
+              ShowDrawer = not state.ShowDrawer },
+        Cmd.none
+    | Counter msg -> 
+        let x, cmd = Counter.update msg state.Counter
+        { state with Counter = x}, cmd
+
+let drawerWidth = 240
+
+let useStyles: unit -> _ =
+    Styles.makeStyles
+        (fun styles theme ->
+            {| root = styles.create [ style.display.flex ]
+               appBar =
+                   styles.create [
+                       style.zIndex (theme.zIndex.drawer + 1)
+                   ]
+               menuButton =
+                   styles.create [
+                       style.marginRight (theme.spacing (2))
+                   ]
+               title = styles.create [ style.flexGrow 1 ] |}
+
+            )
+
+//    + theme.transitions.create (
+//        [| "margin"; "width" |],
+//        { new TransitionOptions with
+//            member __.delay = 0
+//            member __.duration = theme.transitions.duration.leavingScreen
+//            member __.easing = theme.transitions.easing.sharp }
+//    )
+//    appBarShift =
+//        styles.create [
+//            style.width (length.perc (100 - drawerWidth))
+//            style.marginLeft drawerWidth
+//        ]
+
 
 [<ReactComponent>]
 let Router () =
     let state, dispatch = React.useElmish (init, update)
+    let classes = useStyles ()
+
     React.router [
         router.onUrlChanged (UrlChanged >> dispatch)
-
         router.children [
-            match state.CurrentUrl with
-            | [ ] -> 
-                Html.div [ 
-                    Html.h1 "Home"
-                    Counter.Counter()
-                    Mui.button [ 
-                        prop.onClick (fun _ -> Router.navigate("users"))
-                        prop.text "Users"
+            Html.div [
+                prop.className classes.root
+                prop.children [
+                    Mui.appBar [
+                        appBar.position.fixed'
+                        prop.className classes.appBar
+                        appBar.children [
+                            Mui.toolbar [
+                                Mui.iconButton [
+                                    iconButton.edge.start
+                                    prop.className classes.menuButton
+                                    iconButton.color.inherit'
+                                    prop.ariaLabel "menu"
+                                    prop.children [
+                                        Fable.MaterialUI.Icons.menuIcon []
+                                    ]
+                                    prop.onClick (fun _ -> ToggleDrawer |> dispatch)
+                                ]
+                                Mui.typography [
+                                    typography.variant.h6
+                                    prop.className classes.title
+
+                                    match state.CurrentUrl with
+                                    | [] -> "Home"
+                                    | [ "users" ] -> "Users"
+                                    | [ "users"; Route.Int userId ] -> (sprintf "User ID %d" userId)
+                                    | _ -> "Not found"
+                                    |> typography.children
+                                ]
+                                AuthStatus.LogIn()
+                            ]
                         ]
+                    ]
+
+                    Drawer.Drawer state.ShowDrawer
+
+                    Html.main [
+                        Mui.toolbar []
+                        match state.CurrentUrl with
+                        | [] ->
+                            Html.div [
+                                Counter.Counter state.Counter (Msg.Counter >> dispatch)
+                            ]
+                        | [ "users" ] ->
+                            Html.div [
+                                Mui.typography "Nothing to see here"
+                            ]
+                        | [ "users"; Route.Int userId ] -> Html.h1 (sprintf "User ID %d" userId)
+                        | [ "DevEnv" ] -> DevEnv.View()
+                        | _ -> Html.h1 "Not found"
+                    ]
                 ]
-            | [ "users" ] -> 
-                Html.div [ 
-                    Html.h1 "Users page"
-                    Mui.button [ 
-                        prop.onClick (fun _ -> Router.navigate(""))
-                        prop.text "Home"
-                        ]
-                ]
-            | [ "users"; Route.Int userId ] -> Html.h1 (sprintf "User ID %d" userId)
-            | _ -> Html.h1 "Not found"
+            ]
         ]
     ]

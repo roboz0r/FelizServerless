@@ -1,13 +1,38 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{072DC86F-FBA0-40BB-A1C8-6D417AC064DC}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Client", "src\client\Client.fsproj", "{7FFA3003-539B-401A-9DEF-E2B26E6D2EC4}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Client", "src\client\Client.fsproj", "{7FFA3003-539B-401A-9DEF-E2B26E6D2EC4}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Server", "src\server\Server.fsproj", "{113A3E00-A695-496A-AEFA-A36CF5D8C3EF}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Server", "src\server\Server.fsproj", "{113A3E00-A695-496A-AEFA-A36CF5D8C3EF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "client'", "client'", "{5C4C8D7C-7198-4416-985E-E8BFA2745ACD}"
+	ProjectSection(SolutionItems) = preProject
+		src\client\.editorconfig = src\client\.editorconfig
+		src\client\styles\global.scss = src\client\styles\global.scss
+		src\client\index.html = src\client\index.html
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "auth0", "auth0", "{757DEBBB-BA8D-4F07-9632-A384B08DB7FC}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "React", "src\client\auth0\React\React.fsproj", "{EEEE3865-3F35-44C7-B404-2750E956451A}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SPA", "src\client\auth0\SPA\SPA.fsproj", "{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server'", "Server'", "{4CE7519F-DF5E-4144-A81D-A1392C4D2890}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BFC9AD47-A990-4443-8277-CDA5FD09C208}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		package.json = package.json
+		README.md = README.md
+		webpack.common.js = webpack.common.js
+		webpack.config.js = webpack.config.js
+		webpack.tests.js = webpack.tests.js
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,9 +42,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{7FFA3003-539B-401A-9DEF-E2B26E6D2EC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -46,9 +68,42 @@ Global
 		{113A3E00-A695-496A-AEFA-A36CF5D8C3EF}.Release|x64.Build.0 = Release|Any CPU
 		{113A3E00-A695-496A-AEFA-A36CF5D8C3EF}.Release|x86.ActiveCfg = Release|Any CPU
 		{113A3E00-A695-496A-AEFA-A36CF5D8C3EF}.Release|x86.Build.0 = Release|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Debug|x64.Build.0 = Debug|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Debug|x86.Build.0 = Debug|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Release|x64.ActiveCfg = Release|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Release|x64.Build.0 = Release|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Release|x86.ActiveCfg = Release|Any CPU
+		{EEEE3865-3F35-44C7-B404-2750E956451A}.Release|x86.Build.0 = Release|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Debug|x64.Build.0 = Debug|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Debug|x86.Build.0 = Debug|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Release|x64.ActiveCfg = Release|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Release|x64.Build.0 = Release|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Release|x86.ActiveCfg = Release|Any CPU
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{7FFA3003-539B-401A-9DEF-E2B26E6D2EC4} = {072DC86F-FBA0-40BB-A1C8-6D417AC064DC}
-		{113A3E00-A695-496A-AEFA-A36CF5D8C3EF} = {072DC86F-FBA0-40BB-A1C8-6D417AC064DC}
+		{7FFA3003-539B-401A-9DEF-E2B26E6D2EC4} = {5C4C8D7C-7198-4416-985E-E8BFA2745ACD}
+		{113A3E00-A695-496A-AEFA-A36CF5D8C3EF} = {4CE7519F-DF5E-4144-A81D-A1392C4D2890}
+		{757DEBBB-BA8D-4F07-9632-A384B08DB7FC} = {5C4C8D7C-7198-4416-985E-E8BFA2745ACD}
+		{EEEE3865-3F35-44C7-B404-2750E956451A} = {757DEBBB-BA8D-4F07-9632-A384B08DB7FC}
+		{7BF7A306-2F59-4CB7-BA2D-DDD04915D064} = {757DEBBB-BA8D-4F07-9632-A384B08DB7FC}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {58E64E73-3B09-454C-998D-E671AC4F7AAF}
 	EndGlobalSection
 EndGlobal

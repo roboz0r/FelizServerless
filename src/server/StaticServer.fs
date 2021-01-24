@@ -20,11 +20,14 @@ module Server =
     let Name = "name"
 
     [<FunctionName("server")>]
-    let run ([<HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)>]req: HttpRequest) (log: ILogger) =
+    let run
+        ([<HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)>] req: HttpRequest)
+        (log: ILogger)
+        =
         async {
             log.LogInformation("F# HTTP trigger function processed a request.")
 
-            let nameOpt = 
+            let nameOpt =
                 if req.Query.ContainsKey(Name) then
                     Some(req.Query.[Name].[0])
                 else
@@ -33,26 +36,30 @@ module Server =
             use stream = new StreamReader(req.Body)
             let! reqBody = stream.ReadToEndAsync() |> Async.AwaitTask
 
-            let data = JsonConvert.DeserializeObject<NameContainer>(reqBody)
+            let data =
+                JsonConvert.DeserializeObject<NameContainer>(reqBody)
 
             let name =
                 match nameOpt with
                 | Some n -> n
                 | None ->
-                   match data with
-                   | null -> ""
-                   | nc -> nc.Name
-            
-            let responseMessage =             
+                    match data with
+                    | null -> ""
+                    | nc -> nc.Name
+
+            let responseMessage =
                 if (String.IsNullOrWhiteSpace(name)) then
                     "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
                 else
-                    "Hello, " +  name + ". This HTTP triggered function executed successfully."
+                    "Hello, "
+                    + name
+                    + ". This HTTP triggered function executed successfully."
 
             return OkObjectResult(responseMessage) :> IActionResult
-        } |> Async.StartAsTask
+        }
+        |> Async.StartAsTask
 
-        
+
     // The RequestObjects are new since I last looked at functions.
     // Previously I used something like
     // let r = new HttpResponseMessage()
@@ -60,26 +67,37 @@ module Server =
     // r.Content <- new StreamContent(file)
     // r.Content.Headers.ContentType <- Headers.MediaTypeHeaderValue("text/html")
 
-    let [<Literal>] MIMEJSON = "application/json"
+    [<Literal>]
+    let MIMEJSON = "application/json"
 
-    let serveStaticContent (log : ILogger) (context : ExecutionContext) (fileName : string)  =
-        let filePath = Path.Combine(context.FunctionAppDirectory, "public", fileName) |> Path.GetFullPath
+    let serveStaticContent (log: ILogger) (context: ExecutionContext) (fileName: string) =
+        let filePath =
+            Path.Combine(context.FunctionAppDirectory, "public", fileName)
+            |> Path.GetFullPath
+
         try
             let file = new FileStream(filePath, FileMode.Open)
-            log.LogInformation <| sprintf "File found: %s" filePath
+
+            log.LogInformation
+            <| sprintf "File found: %s" filePath
+
             OkObjectResult file :> ObjectResult
         with _ ->
             let msg = sprintf "File not found: %s" filePath
             log.LogError msg
             BadRequestObjectResult msg :> ObjectResult
 
-    // Could do more interesting things with the routing... like Suave https://suave.io/routing.html
-
     [<FunctionName("serveStatic")>]
-    let serveStatic ([<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "{staticFile?}")>] req : HttpRequest,
-                     log : ILogger,
-                     context : ExecutionContext) =
+    let serveStatic
+        (
+            [<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "{staticFile?}")>] req: HttpRequest,
+            log: ILogger,
+            context: ExecutionContext
+        ) =
         log.LogInformation "Serving static content"
+
         match req.Path with
         | s when s.Value = "/api/" -> "index.html" |> serveStaticContent log context
-        | s -> s.Value.Replace("/api/", "") |> serveStaticContent log context
+        | s ->
+            s.Value.Replace("/api/", "")
+            |> serveStaticContent log context

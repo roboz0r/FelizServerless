@@ -19,12 +19,21 @@ let update msg state =
     | Decrement -> { state with Count = state.Count - 1 }, Cmd.none
 
 [<ReactComponent>]
-let Counter () =
-    let state, dispatch = React.useElmish (init, update)
+let Counter state dispatch = 
 
-    Html.div [ Html.h1 state.Count
-               Mui.button [ prop.text "Increment"
-                            prop.onClick (fun _ -> dispatch Increment) ]
+    Html.div [
+        Html.h1 state.Count
+        Mui.button [
+            prop.text "Increment"
+            prop.onClick (fun _ -> dispatch Increment)
+            button.color.primary
+            button.variant.outlined
+        ]
 
-               Mui.button [ prop.text "Decrement"
-                            prop.onClick (fun _ -> dispatch Decrement) ] ]
+        Mui.button [
+            prop.text "Decrement"
+            prop.onClick (fun _ -> dispatch Decrement)
+            button.color.primary
+            button.variant.outlined
+        ]
+    ]
