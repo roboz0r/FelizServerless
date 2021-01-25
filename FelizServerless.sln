@@ -7,7 +7,7 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Client", "src\client\Client
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Server", "src\server\Server.fsproj", "{113A3E00-A695-496A-AEFA-A36CF5D8C3EF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "client'", "client'", "{5C4C8D7C-7198-4416-985E-E8BFA2745ACD}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Client'", "Client'", "{5C4C8D7C-7198-4416-985E-E8BFA2745ACD}"
 	ProjectSection(SolutionItems) = preProject
 		src\client\.editorconfig = src\client\.editorconfig
 		src\client\styles\global.scss = src\client\styles\global.scss
@@ -27,6 +27,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		build.fsx = build.fsx
+		fake.cmd = fake.cmd
+		fake.sh = fake.sh
 		package.json = package.json
 		README.md = README.md
 		webpack.common.js = webpack.common.js

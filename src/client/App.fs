@@ -8,21 +8,28 @@ open Feliz.MaterialUI
 
 
 type State =
-    { CurrentUrl: string list
-      Counter: Counter.State
-      ShowDrawer: bool }
+    {
+        CurrentUrl: string list
+        Counter: Counter.State
+        ShowDrawer: bool
+        ToDoList: ToDoList.State
+    }
 
 type Msg =
     | UrlChanged of string list
     | ToggleDrawer
     | Counter of Counter.Msg
+    | ToDo of ToDoList.Msg
 
 let init () =
     let counter, cmd = Counter.init ()
 
-    { CurrentUrl = Router.currentUrl ()
-      Counter = counter
-      ShowDrawer = true },
+    {
+        CurrentUrl = Router.currentUrl ()
+        Counter = counter
+        ShowDrawer = true
+        ToDoList = ToDoList.init ()
+    },
     Cmd.batch [ cmd ]
 
 let update msg state =
@@ -30,28 +37,34 @@ let update msg state =
     | (UrlChanged segments) -> { state with CurrentUrl = segments }, Cmd.none
     | ToggleDrawer ->
         { state with
-              ShowDrawer = not state.ShowDrawer },
+            ShowDrawer = not state.ShowDrawer
+        },
         Cmd.none
-    | Counter msg -> 
+    | Counter msg ->
         let x, cmd = Counter.update msg state.Counter
-        { state with Counter = x}, cmd
+        { state with Counter = x }, cmd
+    | ToDo msg ->
+        let todo = ToDoList.update msg state.ToDoList
+        { state with ToDoList = todo }, Cmd.none
+
 
 let drawerWidth = 240
 
 let useStyles: unit -> _ =
     Styles.makeStyles
         (fun styles theme ->
-            {| root = styles.create [ style.display.flex ]
-               appBar =
-                   styles.create [
-                       style.zIndex (theme.zIndex.drawer + 1)
-                   ]
-               menuButton =
-                   styles.create [
-                       style.marginRight (theme.spacing (2))
-                   ]
-               title = styles.create [ style.flexGrow 1 ] |}
-
+            {|
+                root = styles.create [ style.display.flex ]
+                appBar =
+                    styles.create [
+                        style.zIndex (theme.zIndex.drawer + 1)
+                    ]
+                menuButton =
+                    styles.create [
+                        style.marginRight (theme.spacing (2))
+                    ]
+                title = styles.create [ style.flexGrow 1 ]
+            |}
             )
 
 //    + theme.transitions.create (
@@ -102,6 +115,7 @@ let Router () =
                                     | [] -> "Home"
                                     | [ "users" ] -> "Users"
                                     | [ "users"; Route.Int userId ] -> (sprintf "User ID %d" userId)
+                                    | [ "ToDo" ] -> "To Do List"
                                     | _ -> "Not found"
                                     |> typography.children
                                 ]
@@ -125,6 +139,7 @@ let Router () =
                             ]
                         | [ "users"; Route.Int userId ] -> Html.h1 (sprintf "User ID %d" userId)
                         | [ "DevEnv" ] -> DevEnv.View()
+                        | [ "ToDo" ] -> ToDoList.View state.ToDoList (ToDo >> dispatch)
                         | _ -> Html.h1 "Not found"
                     ]
                 ]

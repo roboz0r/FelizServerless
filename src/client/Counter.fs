@@ -19,7 +19,7 @@ let update msg state =
     | Decrement -> { state with Count = state.Count - 1 }, Cmd.none
 
 [<ReactComponent>]
-let Counter state dispatch = 
+let Counter state dispatch =
 
     Html.div [
         Html.h1 state.Count

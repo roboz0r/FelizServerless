@@ -13,8 +13,6 @@ let stringOrEmpty =
     | Some s -> s
     | None -> ""
 
-
-
 type AuthStatusState = { mutable ShowMenu: bool }
 
 /// Provides the ability to log in to the app.

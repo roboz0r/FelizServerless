@@ -12,17 +12,19 @@ let drawerWidth = 240
 let useStyles: unit -> _ =
     Styles.makeStyles
         (fun styles theme ->
-            {| hide = styles.create [ style.display.none ]
-               drawer =
-                   styles.create [
-                       style.width drawerWidth
-                       style.flexShrink 0
-                       style.marginRight (theme.spacing (1))
-                   ]
-               drawerPaper =
-                   styles.create [
-                       style.width drawerWidth
-                   ] |})
+            {|
+                hide = styles.create [ style.display.none ]
+                drawer =
+                    styles.create [
+                        style.width drawerWidth
+                        style.flexShrink 0
+                        style.marginRight (theme.spacing (1))
+                    ]
+                drawerPaper =
+                    styles.create [
+                        style.width drawerWidth
+                    ]
+            |})
 
 [<ReactComponent>]
 let Drawer showDrawer =
@@ -67,6 +69,14 @@ let Drawer showDrawer =
                     listItem.children [
                         Mui.listItemIcon [ groupIcon [] ]
                         Mui.listItemText "Development"
+                    ]
+                ]
+                Mui.listItem [
+                    prop.onClick (fun _ -> Router.navigate ("ToDo"))
+                    listItem.button true
+                    listItem.children [
+                        Mui.listItemIcon [ assignmentIcon [] ]
+                        Mui.listItemText "To Do List"
                     ]
                 ]
             ]

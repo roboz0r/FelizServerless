@@ -6,6 +6,7 @@
     <None Include="index.html" />
     <Compile Include="Extensions.fs" />
     <Compile Include="DevEnv.fs" />
+    <Compile Include="ToDoList.fs" />
     <Compile Include="Counter.fs" />
     <Compile Include="AuthStatus.fs" />
     <Compile Include="Drawer.fs" />
