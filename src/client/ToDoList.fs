@@ -69,7 +69,9 @@ let update msg state =
         { state with Items = items }
     | AddItemChanged s -> { state with NewItemText = s }
 
-
+// TODO Stop using the hook api 
+// https://stackoverflow.com/questions/56432167/how-to-style-components-using-makestyles-and-still-have-lifecycle-methods-in-mat
+// https://cmeeren.github.io/Feliz.MaterialUI/#usage/themes
 let useStyles: unit -> _ =
     Styles.makeStyles
         (fun styles theme ->

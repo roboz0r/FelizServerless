@@ -1,4 +1,4 @@
-[*.fs]
+[*.{fs,fsx}]
 indent_size=4
 max_line_length=120
 fsharp_semicolon_at_end_of_line=false
