@@ -70,13 +70,11 @@ let private renderSoftware (x: Software) =
             typography.children x.Name
         ]
         Mui.typography [
-            typography.children [
-                Html.p x.Description
-                Html.a [
-                    prop.text "Download"
-                    prop.href x.Link
-                ]
-            ]
+            typography.children [ x.Description ]
+        ]
+        Html.a [
+            prop.text "Download"
+            prop.href x.Link
         ]
     ]
 

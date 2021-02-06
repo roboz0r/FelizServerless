@@ -13,6 +13,7 @@ type State =
         Counter: Counter.State
         ShowDrawer: bool
         ToDoList: ToDoList.State
+        AuthState: AuthStatus.State
     }
 
 type Msg =
@@ -20,6 +21,7 @@ type Msg =
     | ToggleDrawer
     | Counter of Counter.Msg
     | ToDo of ToDoList.Msg
+    | AuthStatus of AuthStatus.Msg
 
 let init () =
     let counter, cmd = Counter.init ()
@@ -29,6 +31,7 @@ let init () =
         Counter = counter
         ShowDrawer = true
         ToDoList = ToDoList.init ()
+        AuthState = AuthStatus.init
     },
     Cmd.batch [ cmd ]
 
@@ -46,6 +49,9 @@ let update msg state =
     | ToDo msg ->
         let todo = ToDoList.update msg state.ToDoList
         { state with ToDoList = todo }, Cmd.none
+    | AuthStatus msg ->
+        let auth = AuthStatus.update msg state.AuthState
+        { state with AuthState = auth }, Cmd.none
 
 
 let drawerWidth = 240
@@ -64,8 +70,7 @@ let useStyles: unit -> _ =
                         style.marginRight (theme.spacing (2))
                     ]
                 title = styles.create [ style.flexGrow 1 ]
-            |}
-            )
+            |})
 
 //    + theme.transitions.create (
 //        [| "margin"; "width" |],
@@ -84,22 +89,22 @@ let useStyles: unit -> _ =
 [<ReactComponent>]
 let Router () =
     let state, dispatch = React.useElmish (init, update)
-    let classes = useStyles ()
+    let styles = useStyles ()
 
     React.router [
         router.onUrlChanged (UrlChanged >> dispatch)
         router.children [
             Html.div [
-                prop.className classes.root
+                prop.className styles.root
                 prop.children [
                     Mui.appBar [
                         appBar.position.fixed'
-                        prop.className classes.appBar
+                        prop.className styles.appBar
                         appBar.children [
                             Mui.toolbar [
                                 Mui.iconButton [
                                     iconButton.edge.start
-                                    prop.className classes.menuButton
+                                    prop.className styles.menuButton
                                     iconButton.color.inherit'
                                     prop.ariaLabel "menu"
                                     prop.children [
@@ -109,7 +114,7 @@ let Router () =
                                 ]
                                 Mui.typography [
                                     typography.variant.h6
-                                    prop.className classes.title
+                                    prop.className styles.title
 
                                     match state.CurrentUrl with
                                     | [] -> "Home"
@@ -119,7 +124,7 @@ let Router () =
                                     | _ -> "Not found"
                                     |> typography.children
                                 ]
-                                AuthStatus.LogIn()
+                                AuthStatus.LogIn state.AuthState (AuthStatus >> dispatch)
                             ]
                         ]
                     ]
@@ -133,10 +138,7 @@ let Router () =
                             Html.div [
                                 Counter.Counter state.Counter (Msg.Counter >> dispatch)
                             ]
-                        | [ "users" ] ->
-                            Html.div [
-                                Mui.typography "Nothing to see here"
-                            ]
+                        | [ "users" ] -> UserPage.View state.AuthState.UserDetails dispatch
                         | [ "users"; Route.Int userId ] -> Html.h1 (sprintf "User ID %d" userId)
                         | [ "DevEnv" ] -> DevEnv.View()
                         | [ "ToDo" ] -> ToDoList.View state.ToDoList (ToDo >> dispatch)

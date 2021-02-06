@@ -1,5 +1,5 @@
 module rec Fable.Auth0.Auth0Context
-
+// fsharplint:disable
 open System
 open Fable.Core
 open Fable.Core.JS

@@ -5,20 +5,19 @@ open Browser.Dom
 open Fable.Core.JsInterop
 open Fable.Auth0
 open Fable.Auth0.Provider
+open FelizServerless.Scope
 
 importAll "./styles/global.scss"
 
 let auth0ProviderOptions =
     jsOptions<IAuth0ProviderOptions>
         (fun x ->
-            x.domain <- "funceng.au.auth0.com"
-            x.clientId <- "p4dJdVxaclOlk7YRqj8tYulBifQGlb6s"
+            x.domain <- Auth0.Domain
+            x.clientId <- Auth0.ClientId
             x.redirectUri <- Some(window.location.origin)
-            x.audience <- Some "https://funceng.azurewebsites.net/"
-            x.scope <- Some "read:current_user update:current_user_metadata"
+            x.audience <- Some Auth0.Audience
+            x.scope <- Some $"{ReadCurrentUser} {UpdateCurrentUserMetadata}"
             x.children <- Some(App.Router()))
-
-// TODO https://auth0.com/docs/quickstart/spa/react/02-calling-an-api
 
 [<ReactComponent>]
 let AuthProvider () =

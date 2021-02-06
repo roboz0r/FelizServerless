@@ -8,13 +8,17 @@
     <Compile Include="DevEnv.fs" />
     <Compile Include="ToDoList.fs" />
     <Compile Include="Counter.fs" />
+    <Compile Include="Scope.fs" />
+    <Compile Include="Auth0.fs" />
     <Compile Include="AuthStatus.fs" />
+    <Compile Include="UserPage.fs" />
     <Compile Include="Drawer.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.DateFunctions" Version="3.6.0" />
+    <PackageReference Include="Fable.Fetch" Version="2.2.0" />
     <PackageReference Include="Fable.Promise" Version="2.1.0" />
     <PackageReference Include="Fable.MaterialUI.Icons" Version="1.3.0" />
     <PackageReference Include="Feliz.MaterialUI" Version="1.2.5" />
