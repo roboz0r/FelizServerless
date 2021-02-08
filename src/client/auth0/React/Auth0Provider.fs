@@ -1,4 +1,5 @@
 module rec Fable.Auth0.Provider
+// fsharplint:disable
 
 open System
 open Fable.Core

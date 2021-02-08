@@ -4,6 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="index.html" />
+    <Compile Include="../Shared/SharedCounter.fs" />
+    <Compile Include="Deferred.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="DevEnv.fs" />
     <Compile Include="ToDoList.fs" />
@@ -24,6 +26,7 @@
     <PackageReference Include="Feliz.MaterialUI" Version="1.2.5" />
     <PackageReference Include="Feliz.Router" Version="3.5.0" />
     <PackageReference Include="Feliz.UseElmish" Version="1.5.0" />
+    <PackageReference Include="Fable.Remoting.Client" Version="7.2.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="auth0\React\React.fsproj" />

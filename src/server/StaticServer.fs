@@ -87,17 +87,17 @@ module Server =
             log.LogError msg
             BadRequestObjectResult msg :> ObjectResult
 
-    [<FunctionName("serveStatic")>]
-    let serveStatic
-        (
-            [<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "{staticFile?}")>] req: HttpRequest,
-            log: ILogger,
-            context: ExecutionContext
-        ) =
-        log.LogInformation "Serving static content"
+    // [<FunctionName("serveStatic")>]
+    // let serveStatic
+    //     (
+    //         [<HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "{staticFile?}")>] req: HttpRequest,
+    //         log: ILogger,
+    //         context: ExecutionContext
+    //     ) =
+    //     log.LogInformation "Serving static content"
 
-        match req.Path with
-        | s when s.Value = "/api/" -> "index.html" |> serveStaticContent log context
-        | s ->
-            s.Value.Replace("/api/", "")
-            |> serveStaticContent log context
+    //     match req.Path with
+    //     | s when s.Value = "/api/" -> "index.html" |> serveStaticContent log context
+    //     | s ->
+    //         s.Value.Replace("/api/", "")
+    //         |> serveStaticContent log context

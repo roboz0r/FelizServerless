@@ -33,7 +33,7 @@ let init () =
         ToDoList = ToDoList.init ()
         AuthState = AuthStatus.init
     },
-    Cmd.batch [ cmd ]
+    cmd |> Cmd.map Counter
 
 let update msg state =
     match msg with
@@ -44,8 +44,8 @@ let update msg state =
         },
         Cmd.none
     | Counter msg ->
-        let x, cmd = Counter.update msg state.Counter
-        { state with Counter = x }, cmd
+        let x = Counter.update msg state.Counter
+        { state with Counter = x }, Cmd.none
     | ToDo msg ->
         let todo = ToDoList.update msg state.ToDoList
         { state with ToDoList = todo }, Cmd.none

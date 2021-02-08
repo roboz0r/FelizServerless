@@ -20,6 +20,11 @@ let allSoftware =
             Link = "https://github.com/Azure/azure-functions-core-tools#installing"
         }
         {
+            Name = "Azure CLI"
+            Description = "Provides ability to log in to azure via cli 'az'. Needed for Azure functions publishing."
+            Link = "https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli"
+        }
+        {
             Name = "Everything"
             Description = "Indexes local drives and provies and actually decent search experience on windows."
             Link = "https://www.voidtools.com/downloads/"

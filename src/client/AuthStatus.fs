@@ -73,6 +73,7 @@ let LogIn state dispatch =
     if state.AuthState <> authState then
         dispatch (SetAuthState authState)
 
+    //  https://auth0.com/docs/quickstart/spa/react/02-calling-an-api
     React.useEffect (
         (fun _ ->
             // Get User Details
