@@ -34,7 +34,11 @@ module.exports = (env, argv) => {
             '/api/**': {
                 target: "http://localhost:7071",
                 // pathRewrite: {'^/api': ''},
-                changeOrigin: true
+                changeOrigin: true,
+                
+                headers: {
+                    Host:"localhost:7071"
+                }
             }
         },
         // Use babel-preset-env to generate JS compatible with most-used browsers.

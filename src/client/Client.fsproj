@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="index.html" />
+    <Compile Include="../Shared/SharedJWT.fs" />
     <Compile Include="../Shared/SharedCounter.fs" />
     <Compile Include="Deferred.fs" />
     <Compile Include="Extensions.fs" />

@@ -1,6 +1,7 @@
 [<RequireQualifiedAccess>]
 module FelizServerless.AuthStatus
 
+open System
 open Fable.Core
 open Feliz
 open Feliz.UseElmish
@@ -17,23 +18,28 @@ type State =
         AuthState: AuthState
         UserDetails: Auth0.IUserDetails option
         AnchorEl: Browser.Types.Element option
+        Scopes: string list
+        Token: JWToken option
     }
 
 type Msg =
-    | SetUserDetails of Auth0.IUserDetails option
+    | SetUserDetails of Auth0.IUserDetails
     | SetAuthState of AuthState
     | SetAnchorEl of Browser.Types.Element option
+    | SetToken of JWToken
 
-let init =
+let init scopes =
     {
-        AuthState = Loading
+        AuthState = Anonymous
         UserDetails = None
         AnchorEl = None
+        Scopes = scopes
+        Token = None
     }
 
 let update msg state =
     match msg with
-    | SetUserDetails x -> { state with UserDetails = x }
+    | SetUserDetails x -> { state with UserDetails = Some x }
     | SetAuthState x ->
         match x with
         | Authenticated _ -> { state with AuthState = x }
@@ -41,14 +47,21 @@ let update msg state =
             { state with
                 AuthState = x
                 UserDetails = None
+                Token = None
             }
     | SetAnchorEl x -> { state with AnchorEl = x }
+    | SetToken x -> { state with Token = Some x }
 
 
 let stringOrEmpty =
     function
     | Some s -> s
     | None -> ""
+
+let allScopes x = 
+    match x with
+    | [] -> None
+    | x -> Some (String.Join(" ", x))
 
 type AuthStatusState = { mutable ShowMenu: bool }
 
@@ -77,39 +90,40 @@ let LogIn state dispatch =
     React.useEffect (
         (fun _ ->
             // Get User Details
-            promise {
-                let domain = Auth0.Domain
+            match state.AuthState with
+            | Authenticated user ->
+                promise {
+                    let domain = Auth0.Domain
 
-                try
-                    let user =
-                        auth0.user
-                        |> Option.defaultWith (fun _ -> failwith "No user on auth0 object")
+                    try
+                        let! accessToken =
+                            auth0.getAccessTokenSilently (
+                                jsOptions<Global.IGetTokenSilentlyOptions>
+                                    (fun x ->
+                                        x.audience <- Some $"https://{domain}/api/v2/"
+                                        x.scope <- allScopes state.Scopes)
+                            )
 
-                    let! accessToken =
-                        auth0.getAccessTokenSilently (
-                            jsOptions<Global.IGetTokenSilentlyOptions>
-                                (fun x ->
-                                    x.audience <- Some $"https://{Auth0.Domain}/api/v2/"
-                                    x.scope <- Some Scope.ReadCurrentUser)
-                        )
+                        dispatch (SetToken( JWToken accessToken))
 
-                    let userDetailsByIdUrl =
-                        $"https://{Auth0.Domain}/api/v2/users/{user.sub}"
 
-                    let header: IHttpRequestHeaders =
-                        !!{|
-                              Authorization = $"Bearer {accessToken}"
-                          |}
+                        let userDetailsByIdUrl =
+                            $"https://{domain}/api/v2/users/{user.sub}"
 
-                    let! userDetailsResponse = fetch userDetailsByIdUrl [ Headers(header) ]
-                    let! userDetails = userDetailsResponse.json ()
+                        let header: IHttpRequestHeaders =
+                            !!{|
+                                  Authorization = $"Bearer {accessToken}"
+                              |}
 
-                    dispatch (SetUserDetails(Some !!userDetails))
-                with ex ->
-                    console.log (sprintf "Error getting user metadata: %s" ex.Message)
-                    dispatch (SetUserDetails None)
-            }
-            |> Promise.start),
+                        let! userDetailsResponse = fetch userDetailsByIdUrl [ Headers(header) ]
+                        let! (userDetails: Auth0.IUserDetails) = !!(userDetailsResponse.json ())
+
+                        dispatch (SetUserDetails(userDetails))
+                    with ex ->
+                        console.log (sprintf "Error getting user details: %s" ex.Message)
+                }
+                |> Promise.start
+            | _ -> ()),
         [| state.AuthState :> obj |]
     )
 
@@ -124,14 +138,14 @@ let LogIn state dispatch =
         Html.div [
             Mui.button [
                 prop.ariaControls "simple-menu"
-                prop.text "Loading"
+                prop.text "Loading..."
                 button.color.inherit'
+                button.disabled true
             ]
         ]
     | HasError e ->
         Html.div [
             Mui.button [
-                prop.text ("Error. Reset")
                 prop.onClick (fun e -> dispatch (SetAuthState Anonymous))
                 button.color.inherit'
                 button.children [
@@ -145,7 +159,6 @@ let LogIn state dispatch =
                     ]
                 ]
             ]
-
         ]
     | Authenticated user ->
         let pic = stringOrEmpty user.picture
@@ -164,6 +177,13 @@ let LogIn state dispatch =
                 menu.onClose (fun _ -> dispatch (SetAnchorEl None))
 
                 menu.children [
+                    Mui.menuItem [
+                        Html.img [
+                            prop.src pic
+                            prop.width 50
+                            prop.height 50
+                        ]
+                    ]
                     Mui.menuItem [
                         menuItem.children "Logout"
                         prop.onClick

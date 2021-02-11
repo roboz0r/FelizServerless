@@ -9,7 +9,7 @@ open Microsoft.AspNetCore.Http
 open Newtonsoft.Json
 open Microsoft.Extensions.Logging
 open Saturn.Application
-open Jwt
+open FuncEngJwt
 open Saturn.AzureFunctions
 open Saturn.Controller
 open Saturn
@@ -63,48 +63,73 @@ module Saturn =
                     |> Controller.text ctx)
         }
 
-    let counterImpl:ICounter = {
-        Init = fun _ -> async { return 0 }
-        InitValue = fun i -> async { return i }
-    }
+    let counterImpl: ICounter =
+        {
+            Init = fun _ -> async { return 0 }
+            InitValue = fun i -> async { return i }
+        }
 
-    let counterHandler : Giraffe.Core.HttpHandler = 
-        Remoting.createApi()
-        |> Remoting.fromValue counterImpl
+    let defaultHandler impl: Giraffe.Core.HttpHandler =
+        Remoting.createApi ()
+        |> Remoting.fromValue impl
+        |> Remoting.withRouteBuilder (fun typeName methodName -> $"/{methodName}")
         |> Remoting.buildHttpHandler
 
 
-    let counterController = 
-        controller {
-            index (fun ctx -> Controller.json ctx 0 )
-            show (fun ctx (id:string) -> 
-                match Int32.TryParse id with
-                | true, i -> Controller.json ctx i
-                | false, _ -> Controller.json ctx -123 )
+    let contextHandler impl: Giraffe.Core.HttpHandler =
+        Remoting.createApi ()
+        |> Remoting.fromContext impl
+        |> Remoting.withRouteBuilder (fun typeName methodName -> $"/{methodName}")
+        |> Remoting.buildHttpHandler
 
+    let counterHandler = defaultHandler counterImpl
+
+    let claimsImpl (ctx: HttpContext): IClaims =
+        let token =
+            match ctx.Request.Headers.TryGetValue "Authorization" with
+            | true, x ->
+                match x.Count with
+                | 1 ->
+                    let x = x.[0]
+
+                    if x.StartsWith("Bearer ") then
+                        Ok(x.[7..])
+                    else
+                        Error(OtherJwtError "Header must be of the format Authorization : Bearer <token>")
+                | _ -> Error(OtherJwtError "More than one Authorization Header supplied.")
+            | false, _ -> Error(OtherJwtError "Header must be of the format Authorization : Bearer <token>")
+
+        {
+            GetClaims = fun _ -> async { return token |> Result.bind FuncEngJwt.validate }
         }
 
-    let mainRouter context = 
+    let claimsHandler = contextHandler claimsImpl
+
+    let mainRouter context =
         router {
-            forward "/ICounter" counterHandler // (staticController context)
+            forward "/IClaims" claimsHandler
+            forward "/ICounter" counterHandler
             forward "" (staticController context)
         }
 
-    let func log context =
-        azureFunction {
+
+    /// Catch all http function
+    /// Note will only capture a url with a maximum of 5 segments. Seemingly no way to make it capture all http requests.
+    /// Should consider splitting to more functions if the routing gets confusing or expensive to construct
+    [<FunctionName("SaturnRouter")>]
+    let saturnRouter
+        (
+            [<HttpTrigger(AuthorizationLevel.Anonymous, Route = "{seg1?}/{seg2?}/{seg3?}/{seg4?}/{seg5?}")>] req: HttpRequest,
+            log: ILogger,
+            context: ExecutionContext
+        ) =
+        log.LogInformation req.Path.Value
+
+        req
+        |> azureFunction {
             host_prefix "/api"
-            // use_token_authentication
-            use_router (staticController context)
+            use_router (mainRouter context)
             logger log
             error_handler customErrorHandler
             not_found_handler customNotFoundHandler
         }
-
-    [<FunctionName("SaturnHelloWorld")>]
-    let helloWorld
-        (
-            [<HttpTrigger(Extensions.Http.AuthorizationLevel.Anonymous, Route = "{route?}")>] req: HttpRequest,
-            log: ILogger,
-            context: ExecutionContext
-        ) =
-        func log context req

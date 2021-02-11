@@ -6,7 +6,6 @@ open Elmish
 open Feliz.UseElmish
 open Feliz.MaterialUI
 
-
 type State =
     {
         CurrentUrl: string list
@@ -14,6 +13,7 @@ type State =
         ShowDrawer: bool
         ToDoList: ToDoList.State
         AuthState: AuthStatus.State
+        UserPage: UserPage.State
     }
 
 type Msg =
@@ -22,16 +22,23 @@ type Msg =
     | Counter of Counter.Msg
     | ToDo of ToDoList.Msg
     | AuthStatus of AuthStatus.Msg
+    | UserPage of UserPage.Msg
 
 let init () =
     let counter, cmd = Counter.init ()
+
+    let authState =
+        AuthStatus.init [
+            Scope.ReadCurrentUser
+        ]
 
     {
         CurrentUrl = Router.currentUrl ()
         Counter = counter
         ShowDrawer = true
         ToDoList = ToDoList.init ()
-        AuthState = AuthStatus.init
+        AuthState = authState
+        UserPage = UserPage.init authState
     },
     cmd |> Cmd.map Counter
 
@@ -51,7 +58,23 @@ let update msg state =
         { state with ToDoList = todo }, Cmd.none
     | AuthStatus msg ->
         let auth = AuthStatus.update msg state.AuthState
-        { state with AuthState = auth }, Cmd.none
+
+        let page, cmd =
+            UserPage.update (UserPage.SetAuthStatus auth) state.UserPage
+
+        let page, cmd2 =
+            match auth.Token with
+            | Some token -> UserPage.update (UserPage.SetApi(UserPage.userApi token)) page
+            | None -> page, Cmd.none
+
+        { state with
+            AuthState = auth
+            UserPage = page
+        },
+        Cmd.map UserPage (Cmd.batch [ cmd; cmd2 ])
+    | UserPage msg ->
+        let page, cmd = UserPage.update msg state.UserPage
+        { state with UserPage = page }, Cmd.map UserPage cmd
 
 
 let drawerWidth = 240
@@ -138,7 +161,7 @@ let Router () =
                             Html.div [
                                 Counter.Counter state.Counter (Msg.Counter >> dispatch)
                             ]
-                        | [ "users" ] -> UserPage.View state.AuthState.UserDetails dispatch
+                        | [ "users" ] -> UserPage.View state.UserPage dispatch
                         | [ "users"; Route.Int userId ] -> Html.h1 (sprintf "User ID %d" userId)
                         | [ "DevEnv" ] -> DevEnv.View()
                         | [ "ToDo" ] -> ToDoList.View state.ToDoList (ToDo >> dispatch)

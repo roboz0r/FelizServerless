@@ -29,7 +29,7 @@ let update msg state =
         }
     | Decrement ->
         { state with
-            Count = state.Count |> Deferred.map ((-) 1)
+            Count = state.Count |> Deferred.map (fun i -> i - 1)
         }
     | SetValue i -> { state with Count = Resolved i }
 
