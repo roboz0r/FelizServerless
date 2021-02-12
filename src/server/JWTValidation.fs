@@ -8,6 +8,7 @@ open JWT
 open JWT.Algorithms
 open JWT.Builder
 open JWT.Exceptions
+open Microsoft.AspNetCore.Http
 
 module FuncEngJwt =
 
@@ -56,10 +57,24 @@ module FuncEngJwt =
             |}
         |]
 
+    let tokenFromCtx (ctx:HttpContext) = 
+        match ctx.Request.Headers.TryGetValue "Authorization" with
+        | true, x ->
+            match x.Count with
+            | 1 ->
+                let x = x.[0]
+
+                if x.StartsWith("Bearer ") then
+                    Ok(x.[7..])
+                else
+                    Error(OtherJwtError "Authorization header must be of the format Authorization : Bearer <token>")
+            | _ -> Error(OtherJwtError "More than one Authorization Header supplied.")
+        | false, _ -> Error(OtherJwtError "Header must contain value with the format Authorization : Bearer <token>")
+
     /// Validates a JWT
     /// Refer to https://stackoverflow.com/a/64920468/14134059
     /// Returns the decoded claims or a decoding error
-    let validate token =
+    let validateToken token =
         let urlEncoder = JwtBase64UrlEncoder()
         let rsaKey = RSA.Create()
 

@@ -22,7 +22,12 @@ module Saturn =
     [<Literal>]
     let MimeCss = "text/css"
 
+    [<Literal>]
+    let MimeHtml = "text/html"
+
     let port = 7071
+
+    let inline logger (ctx: HttpContext) = ctx.Items.["TraceWriter"] :?> ILogger
 
     let staticController (context: ExecutionContext) =
         let filePath fileName =
@@ -34,13 +39,15 @@ module Saturn =
 
             show
                 (fun ctx (id: string) ->
+                    (logger ctx).LogTrace $"Retrieving file {id}"
+
                     if id.EndsWith(".css") then
                         ctx.Response.ContentType <- MimeCss
 
                     Controller.file ctx (filePath id))
         }
 
-    let customErrorHandler (ex: Exception): Giraffe.Core.HttpHandler =
+    let errorHandler (ex: Exception): Giraffe.Core.HttpHandler =
         controller {
             index (fun ctx -> Controller.text ctx ex.Message)
 
@@ -49,10 +56,9 @@ module Saturn =
                     id
                     |> sprintf "%s, %s" ex.Message
                     |> Controller.text ctx)
-
         }
 
-    let customNotFoundHandler =
+    let notFoundHandler =
         controller {
             index (fun ctx -> Controller.text ctx "Not found")
 
@@ -69,38 +75,32 @@ module Saturn =
             InitValue = fun i -> async { return i }
         }
 
+    let routeNoType typeName methodName = $"/{methodName}"
+
     let defaultHandler impl: Giraffe.Core.HttpHandler =
         Remoting.createApi ()
         |> Remoting.fromValue impl
-        |> Remoting.withRouteBuilder (fun typeName methodName -> $"/{methodName}")
+        |> Remoting.withRouteBuilder routeNoType
         |> Remoting.buildHttpHandler
-
 
     let contextHandler impl: Giraffe.Core.HttpHandler =
         Remoting.createApi ()
         |> Remoting.fromContext impl
-        |> Remoting.withRouteBuilder (fun typeName methodName -> $"/{methodName}")
+        |> Remoting.withRouteBuilder routeNoType
         |> Remoting.buildHttpHandler
 
     let counterHandler = defaultHandler counterImpl
 
     let claimsImpl (ctx: HttpContext): IClaims =
-        let token =
-            match ctx.Request.Headers.TryGetValue "Authorization" with
-            | true, x ->
-                match x.Count with
-                | 1 ->
-                    let x = x.[0]
-
-                    if x.StartsWith("Bearer ") then
-                        Ok(x.[7..])
-                    else
-                        Error(OtherJwtError "Header must be of the format Authorization : Bearer <token>")
-                | _ -> Error(OtherJwtError "More than one Authorization Header supplied.")
-            | false, _ -> Error(OtherJwtError "Header must be of the format Authorization : Bearer <token>")
-
         {
-            GetClaims = fun _ -> async { return token |> Result.bind FuncEngJwt.validate }
+            GetClaims =
+                fun _ ->
+                    async {
+                        return
+                            ctx
+                            |> tokenFromCtx
+                            |> Result.bind validateToken
+                    }
         }
 
     let claimsHandler = contextHandler claimsImpl
@@ -111,7 +111,6 @@ module Saturn =
             forward "/ICounter" counterHandler
             forward "" (staticController context)
         }
-
 
     /// Catch all http function
     /// Note will only capture a url with a maximum of 5 segments. Seemingly no way to make it capture all http requests.
@@ -130,6 +129,6 @@ module Saturn =
             host_prefix "/api"
             use_router (mainRouter context)
             logger log
-            error_handler customErrorHandler
-            not_found_handler customNotFoundHandler
-        }
+            error_handler errorHandler
+            not_found_handler notFoundHandler
+           }

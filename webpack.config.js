@@ -33,7 +33,15 @@ module.exports = (env, argv) => {
         devServerProxy: {
             '/api/**': {
                 target: "http://localhost:7071",
-                // pathRewrite: {'^/api': ''},
+                changeOrigin: true,
+                
+                headers: {
+                    Host:"localhost:7071"
+                }
+            },
+            '/img/**': {
+                target: "http://localhost:7071",
+                pathRewrite: {'^/img': '/api/img'},
                 changeOrigin: true,
                 
                 headers: {
