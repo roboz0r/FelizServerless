@@ -11,12 +11,8 @@ open Fake.IO
 open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
-// open System.Diagnostics
-// open System
 
 Target.initEnvironment ()
-
-//TODO: Incorporate https://github.com/SAFE-Stack/SAFE-template/blob/master/Content/default/build.fsx
 
 let dev = "development"
 let prod = "production"
@@ -32,8 +28,7 @@ let npm args workingDir =
         match ProcessUtils.tryFindFileOnPath "npm" with
         | Some path -> path
         | None ->
-            "npm was not found in path. Please install it and make sure it's available from your path. " +
-            "See https://safe-stack.github.io/docs/quickstart/#install-pre-requisites for more info"
+            "npm was not found in path. Please install it and make sure it's available from your path. https://www.npmjs.com/get-npm" 
             |> failwith
 
     let arguments = args |> String.split ' ' |> Arguments.OfArgs
@@ -56,6 +51,10 @@ let func args workingDir =
 let az args = 
     let result = Shell.Exec ("az", args, rootPath) 
     if result <> 0 then failwithf "'az %s' failed." args
+
+let start args = 
+    let result = Shell.Exec ("pwsh", "--Command start " + args, rootPath) 
+    if result <> 0 then failwithf "'start %s' failed." args
 
 // Target.create "Clean" (fun _ -> 
 //     !! "src/**/bin" 
@@ -88,9 +87,12 @@ Target.create "FableProd" (fun _ ->
 )
 
 Target.create "FuncStart" (fun _ -> 
+    async {   
+        do! Async.Sleep 10000 
+        start "http://localhost:7071/api/" 
+    } |> Async.Start
     func "start" serverPath
 )
-
 
 Target.create "Watch" (fun _ -> 
     [ 
@@ -99,6 +101,10 @@ Target.create "Watch" (fun _ ->
         // https://stackoverflow.com/a/63753889/14134059
         // This allows dotnet watch to be used with Azure functions
         async { dotnet "watch msbuild /t:RunFunctions" serverPath }
+        async {   
+            do! Async.Sleep 5000 
+            start "http://localhost:8080" 
+        }
     ]
     |> Async.Parallel
     |> Async.RunSynchronously

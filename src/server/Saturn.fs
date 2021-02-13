@@ -16,35 +16,23 @@ open Saturn
 open FelizServerless
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
+open HeyRed.Mime
 
 module Saturn =
 
-    [<Literal>]
-    let MimeCss = "text/css"
-
-    [<Literal>]
-    let MimeHtml = "text/html"
-
-    let port = 7071
-
-    let inline logger (ctx: HttpContext) = ctx.Items.["TraceWriter"] :?> ILogger
-
-    let staticController (context: ExecutionContext) =
-        let filePath fileName =
-            Path.Combine(context.FunctionAppDirectory, "public", fileName)
-            |> Path.GetFullPath
+    let staticController =
+        let filePath fileName = Path.Combine("public", fileName)
 
         controller {
-            index (fun ctx -> Controller.file ctx (filePath "index.html"))
+            index
+                (fun ctx ->
+                    let fileName = "index.html"
+                    Controller.appDirFile ctx (filePath fileName) (MimeTypesMap.GetMimeType fileName))
 
             show
-                (fun ctx (id: string) ->
-                    (logger ctx).LogTrace $"Retrieving file {id}"
+                (fun ctx (fileName: string) ->
+                    Controller.appDirFile ctx (filePath fileName) (MimeTypesMap.GetMimeType fileName))
 
-                    if id.EndsWith(".css") then
-                        ctx.Response.ContentType <- MimeCss
-
-                    Controller.file ctx (filePath id))
         }
 
     let errorHandler (ex: Exception): Giraffe.Core.HttpHandler =
@@ -93,42 +81,50 @@ module Saturn =
 
     let claimsImpl (ctx: HttpContext): IClaims =
         {
-            GetClaims =
-                fun _ ->
-                    async {
-                        return
-                            ctx
-                            |> tokenFromCtx
-                            |> Result.bind validateToken
-                    }
+            GetClaims = fun _ -> async { return ctx |> tokenFromCtx |> Result.bind validateToken }
         }
 
     let claimsHandler = contextHandler claimsImpl
 
-    let mainRouter context =
+    let mainRouter =
         router {
             forward "/IClaims" claimsHandler
             forward "/ICounter" counterHandler
-            forward "" (staticController context)
+            forward "" staticController
         }
 
-    /// Catch all http function
-    /// Note will only capture a url with a maximum of 5 segments. Seemingly no way to make it capture all http requests.
-    /// Should consider splitting to more functions if the routing gets confusing or expensive to construct
     [<FunctionName("SaturnRouter")>]
     let saturnRouter
         (
-            [<HttpTrigger(AuthorizationLevel.Anonymous, Route = "{seg1?}/{seg2?}/{seg3?}/{seg4?}/{seg5?}")>] req: HttpRequest,
+            [<HttpTrigger(AuthorizationLevel.Anonymous, Route = "{*any}")>] req: HttpRequest,
             log: ILogger,
             context: ExecutionContext
         ) =
-        log.LogInformation req.Path.Value
+        log.LogInformation("Request path: " + req.Path.Value)
 
-        req
-        |> azureFunction {
-            host_prefix "/api"
-            use_router (mainRouter context)
-            logger log
-            error_handler errorHandler
-            not_found_handler notFoundHandler
-           }
+        match req.Path.Value with
+        | "/api" ->
+            req
+            |> azureFunction {
+                // If request lacks trailing slash then request path to files in html aren't resolved properly
+                use_router (controller { index (fun ctx -> Controller.redirect ctx "/api/") })
+               }
+        | _ ->
+
+            let svcs = req.HttpContext.RequestServices
+
+            req.HttpContext.RequestServices <-
+                { new IServiceProvider with
+                    member __.GetService(t: Type) =
+                        if t = typeof<ExecutionContext> then box context
+                        else svcs.GetService t
+                }
+
+            req
+            |> azureFunction {
+                host_prefix "/api"
+                logger log
+                use_router mainRouter
+                error_handler errorHandler
+                not_found_handler notFoundHandler
+               }
