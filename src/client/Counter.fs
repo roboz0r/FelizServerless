@@ -11,7 +11,7 @@ type Msg =
     | Decrement
     | SetValue of int
 
-type State = { Count: Deferred<int> }
+type State = { Count: Deferred<int, unit> }
 
 let counterApi =
     Remoting.createApi ()
@@ -57,4 +57,4 @@ let Counter state dispatch =
         Html.div [
             Mui.typography "Counter not started."
         ]
-    | InProgress -> Html.div [ Mui.typography "Loading..." ]
+    | InProgress _ -> Html.div [ Mui.typography "Loading..." ]

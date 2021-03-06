@@ -9,6 +9,7 @@ open JWT.Algorithms
 open JWT.Builder
 open JWT.Exceptions
 open Microsoft.AspNetCore.Http
+open Thoth.Json.Net
 
 module FuncEngJwt =
 
@@ -21,6 +22,8 @@ module FuncEngJwt =
     [<Literal>]
     let Jwks =
         "https://funceng.au.auth0.com/.well-known/jwks.json"
+
+    let JwtClaims = "Claims"
 
     //  TODO Consider getting this from the above url as required
     /// https://tools.ietf.org/html/rfc7517
@@ -84,20 +87,18 @@ module FuncEngJwt =
         rsaKey.ImportParameters(rsa)
 
         try
-            let claims =
+            let json = 
                 JwtBuilder()
                     .WithAlgorithm(RS256Algorithm(rsaKey))
                     .Audience(Audience)
                     .MustVerifySignature()
-                    // .Decode(token)
-                    .Decode<IDictionary<string, obj>>(token)
+                    .Decode(token) 
+                // .Decode<IDictionary<string, obj>>(token)
+                |> JsonValue.Parse
+            Claims2.Decoder "" json
+            |> Result.mapError (fun (field, reason) -> OtherJwtError $"Failed to decode {field}\n%A{reason}")
+            // |> Result.map (fun x -> { x with All = json })
 
-            Console.WriteLine(claims)
-
-            claims :> seq<_>
-            |> Seq.map (|KeyValue|)
-            |> Map
-            |> Ok
         with
         | :? InvalidTokenPartsException -> Error InvalidTokenParts
         | :? TokenExpiredException as ex ->

@@ -1,5 +1,5 @@
-// ts2fable 0.7.1
 module rec Fable.Auth0.Global
+// fsharplint:disable
 
 open System
 open Fable.Core

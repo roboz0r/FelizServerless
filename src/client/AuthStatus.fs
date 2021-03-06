@@ -12,6 +12,7 @@ open Fable.Auth0.AuthState
 open Fable.Core.JsInterop
 open Browser.Dom
 open Fetch
+open Fable.Remoting.Client
 
 type State =
     {
@@ -27,6 +28,13 @@ type Msg =
     | SetAuthState of AuthState
     | SetAnchorEl of Browser.Types.Element option
     | SetToken of JWToken
+
+
+let inline createAuthenticatedApi<'T> (JWToken token) =
+    Remoting.createApi ()
+    |> Remoting.withAuthorizationHeader $"Bearer {token}"
+    |> Remoting.withRouteBuilder (fun typeName methodName -> $"/api/{typeName}/{methodName}")
+    |> Remoting.buildProxy<'T>
 
 let init scopes =
     {
@@ -101,6 +109,7 @@ let LogIn state dispatch =
                                 jsOptions<Global.IGetTokenSilentlyOptions>
                                     (fun x ->
                                         x.audience <- Some $"https://{domain}/api/v2/"
+                                        x.redirect_uri <- Some window.location.href
                                         x.scope <- allScopes state.Scopes)
                             )
 

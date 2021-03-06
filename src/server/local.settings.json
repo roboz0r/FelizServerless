@@ -2,6 +2,11 @@
     "IsEncrypted": false,
     "Values": {
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet"
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+        "FuncEng_PrimConnString":"AccountEndpoint=https://funceng-db.documents.azure.com:443/;AccountKey=rMLlNXehADZ1xEBc030siZzBG7pvtplKgNoMr7jRGdcJT7cKuQLpEzdLGCljB26trzyAd9EmgbtijG6g6FrXXw==;",
+        "FuncEng_PrimKey":"rMLlNXehADZ1xEBc030siZzBG7pvtplKgNoMr7jRGdcJT7cKuQLpEzdLGCljB26trzyAd9EmgbtijG6g6FrXXw==",
+        "FuncEng_SecConnString":"AccountEndpoint=AccountEndpoint=https://funceng-db.documents.azure.com:443/;AccountKey=Wn8SysAHqMc7pu0Nh3SfpzZqCCLHfNrCIqhj0ymhz9LITff0oRAToP5o75WCV9lSJCQ7HUBpYHXZPcClvof25Q==;",
+        "FuncEng_SecKey":"Wn8SysAHqMc7pu0Nh3SfpzZqCCLHfNrCIqhj0ymhz9LITff0oRAToP5o75WCV9lSJCQ7HUBpYHXZPcClvof25Q==",
+        "FunEng_DBUrl":"https://funceng-db.documents.azure.com:443/"
     }
 }

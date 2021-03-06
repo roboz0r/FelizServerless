@@ -8,11 +8,12 @@ open Feliz.UseElmish
 open Feliz.MaterialUI
 open Fable.Remoting.Client
 open Elmish
+open Fable.Core.JS
 
 type State =
     {
         AuthStatus: AuthStatus.State
-        Claims: Result<Map<string, obj>, JwtError> option
+        Claims: Result<Claims2, JwtError> option
         ClaimsApi: IClaims option
     }
 
@@ -25,15 +26,11 @@ let init authStatus =
 
 type Msg =
     | SetAuthStatus of AuthStatus.State
-    | SetClaims of Result<Map<string, obj>, JwtError> option
+    | SetClaims of Result<Claims2, JwtError>
     | SetApi of IClaims
+    | NoMsg
 
-let userApi (JWToken token) =
-    Remoting.createApi ()
-    |> Remoting.withAuthorizationHeader $"Bearer {token}"
-    |> Remoting.withRouteBuilder (fun typeName methodName -> $"/api/{typeName}/{methodName}")
-    |> Remoting.buildProxy<IClaims>
-
+let userApi = AuthStatus.createAuthenticatedApi<IClaims>
 
 let update msg state =
     match msg with
@@ -44,12 +41,13 @@ let update msg state =
             ClaimsApi = None
         },
         Cmd.none
-    | SetClaims x -> { state with Claims = x }, Cmd.none
+    | SetClaims x -> { state with Claims = Some x }, Cmd.none
     | SetApi x ->
         let cmd =
-            Cmd.OfAsync.perform x.GetClaims () (Some >> SetClaims)
+            Cmd.OfAsync.either x.GetClaims () SetClaims (fun err -> SetClaims (Error (OtherJwtError err.Message)))
 
         { state with ClaimsApi = Some x }, cmd
+    | NoMsg -> state, Cmd.none
 
 [<ReactComponent>]
 let View (state: State) dispatch =
@@ -64,13 +62,19 @@ let View (state: State) dispatch =
 
         let claims' =
             [
-                for KeyValue (k, v) in claims -> $"{k} : {string v}"
+                $"AuthorizedParty : {claims.AuthorizedParty}"
+                $"Expiration : {claims.Expiration}"
+                $"IssuedAt : {claims.IssuedAt}"
+                $"Issuer : {claims.Issuer}"
+                $"Scopes : {claims.Scopes}"
+                $"Subject : {claims.Subject}"
+                $"Audience ; {claims.Audience}"
             ]
 
         Html.div [
             Mui.typography ($"Name: {userDetails.Name}")
             Mui.typography ($"Email: {userDetails.Email}")
-            yield! claims' |> List.map (fun x -> Mui.typography x)
+            yield! claims' |> List.map Mui.typography
         ]
 
     | Some userDetails, Some (Error err) ->

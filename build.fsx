@@ -23,34 +23,50 @@ let rootPath = Path.getFullName "./"
 let clientPath = Path.getFullName clientRel
 let serverPath = Path.getFullName "./src/Server"
 
-let npm args workingDir =
-    let npmPath =
-        match ProcessUtils.tryFindFileOnPath "npm" with
-        | Some path -> path
-        | None ->
-            "npm was not found in path. Please install it and make sure it's available from your path. https://www.npmjs.com/get-npm" 
-            |> failwith
-
+let run path args workingDir = 
     let arguments = args |> String.split ' ' |> Arguments.OfArgs
 
-    Command.RawCommand (npmPath, arguments)
+    RawCommand (path, arguments)
     |> CreateProcess.fromCommand
     |> CreateProcess.withWorkingDirectory workingDir
     |> CreateProcess.ensureExitCode
     |> Proc.run
     |> ignore
 
+let npm args workingDir =
+    let path =
+        match ProcessUtils.tryFindFileOnPath "npm" with
+        | Some path -> path
+        | None ->
+            "npm was not found in path. Please install it and make sure it's available from your path. https://www.npmjs.com/get-npm" 
+            |> failwith
+
+    run path args workingDir
+
+
+let func args workingDir =
+    let path =
+        match ProcessUtils.tryFindFileOnPath "func" with
+        | Some path -> path
+        | None ->
+            "Azure Functions was not found in path. Please install it and make sure it's available from your path. https://github.com/Azure/azure-functions-core-tools" 
+            |> failwith
+
+    run path args workingDir
+
+let az args =
+    let path =
+        match ProcessUtils.tryFindFileOnPath "az" with
+        | Some path -> path
+        | None ->
+            "Azure CLI was not found in path. Please install it and make sure it's available from your path. https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli" 
+            |> failwith
+
+    run path args rootPath
+
 let dotnet cmd workingDir =
     let result = DotNet.exec (DotNet.Options.withWorkingDirectory workingDir) cmd ""
     if result.ExitCode <> 0 then failwithf "'dotnet %s' failed in %s" cmd workingDir
-
-let func args workingDir =
-    let result = Shell.Exec ("func", args, workingDir) 
-    if result <> 0 then failwithf "'func %s' failed in %s" args workingDir
-
-let az args = 
-    let result = Shell.Exec ("az", args, rootPath) 
-    if result <> 0 then failwithf "'az %s' failed." args
 
 let start args = 
     let result = Shell.Exec ("pwsh", "--Command start " + args, rootPath) 
@@ -102,8 +118,25 @@ Target.create "Watch" (fun _ ->
         // This allows dotnet watch to be used with Azure functions
         async { dotnet "watch msbuild /t:RunFunctions" serverPath }
         async {   
-            do! Async.Sleep 5000 
+            do! Async.Sleep 10000 
             start "http://localhost:8080" 
+        }
+    ]
+    |> Async.Parallel
+    |> Async.RunSynchronously
+    |> ignore
+)
+
+Target.create "WatchFunc" (fun _ -> 
+    [ 
+        // async { dotnet (sprintf "fable %s --run webpack --mode=%s" clientRel dev) rootPath }
+        // async {func "start" serverPath} 
+        // https://stackoverflow.com/a/63753889/14134059
+        // This allows dotnet watch to be used with Azure functions
+        async { dotnet "watch msbuild /t:RunFunctions" serverPath }
+        async {   
+            do! Async.Sleep 10000 
+            start "http://localhost:7071/api/" 
         }
     ]
     |> Async.Parallel
@@ -138,7 +171,13 @@ Target.create "Publish" (fun _ ->
     ==> "Watch"
 
 "CleanDist"
+    ==> "CleanDevServer"
+    ==> "CopyPublic"
+    ==> "FableProd"
+    ==> "WatchFunc"
+
+"CleanDist"
     ==> "FableProd"
     ==> "FuncStart"
 
-Target.runOrDefault "All"
+Target.runOrDefault "Watch"

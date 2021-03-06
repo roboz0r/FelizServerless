@@ -14,7 +14,7 @@ let auth0ProviderOptions =
         (fun x ->
             x.domain <- Auth0.Domain
             x.clientId <- Auth0.ClientId
-            x.redirectUri <- Some(window.location.origin)
+            x.redirectUri <- Some(window.location.href)
             x.audience <- Some Auth0.Audience
             x.scope <- Some $"{ReadCurrentUser} {UpdateCurrentUserMetadata}"
             x.children <- Some(App.Router()))

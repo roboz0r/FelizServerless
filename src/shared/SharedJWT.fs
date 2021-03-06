@@ -4,7 +4,10 @@ open System
 open System.Collections.Generic
 
 #if FABLE_COMPILER
+open Thoth.Json
 open Fable.DateFunctions
+#else
+open Thoth.Json.Net
 #endif
 
 [<Struct>]
@@ -23,39 +26,50 @@ type JwtError =
 /// JWT Claims for Auth0
 /// Refer to https://auth0.com/docs/tokens/json-web-tokens/json-web-token-claims
 /// Also https://www.iana.org/assignments/jwt/jwt.xhtml#claims
-type Claims(claims: IDictionary<string, obj>) =
-    let unixEpoch = 
-#if FABLE_COMPILER 
-        DateTime(1970,1,1)
+type Claims2 =
+    {
+        Issuer: string
+        Subject: string
+        Expiration: DateTime
+        IssuedAt: DateTime
+        Scopes: Set<string>
+        AuthorizedParty: string
+        UniqueId: string
+        Audience: string list
+    }
+    static member Decoder: Decoder<Claims2> =
+        let unixEpoch =
+#if FABLE_COMPILER
+            DateTime(1970, 1, 1)
 #else
-        DateTime.UnixEpoch 
-#endif   
-    let aud =
-        (claims.["aud"] :?> string).Split(',') |> List
+            DateTime.UnixEpoch
+#endif
 
-    let azp = claims.["azp"] :?> string
+        Decode.object
+            (fun get ->
+                let iss = get.Required.Field "iss" Decode.string
+                let sub = get.Required.Field "sub" Decode.string
+                let aud =
+                    get.Optional.Field "aud"
+                        (Decode.oneOf [ Decode.list Decode.string
+                                        Decode.map (fun x -> [ x ]) Decode.string ])
+                    |> Option.defaultValue []
 
-    let exp = 
-
-        unixEpoch + TimeSpan.FromSeconds(claims.["exp"] :?> int64 |> float)
-
-    let iat = 
-        unixEpoch + TimeSpan.FromSeconds(claims.["iat"] :?> int64 |> float)
-
-    let iss = claims.["iss"] :?> string
-
-    let scopes =
-        (claims.["scope"] :?> string).Split(' ') |> Set
-
-    let sub = claims.["sub"] :?> string
-
-    member __.Item key = claims.[key]
-    member __.TryGetValue key = claims.TryGetValue key
-    member __.Issuer = iss
-    member __.Subject = sub
-    member __.Audience = aud
-    member __.Expiration = exp
-    member __.IssuedAt = iat
-    member __.Scopes = scopes
-    member __.HasScope scope = scopes.Contains scope
-    member __.AuthorizedParty = azp
+                {
+                    Issuer = iss
+                    Subject = sub
+                    Expiration =
+                        unixEpoch
+                        + TimeSpan.FromSeconds(float <| get.Required.Field "exp" Decode.int64)
+                    IssuedAt =
+                        unixEpoch
+                        + TimeSpan.FromSeconds(float <| get.Required.Field "iat" Decode.int64)
+                    Scopes =
+                        (get.Required.Field "scope" Decode.string)
+                            .Split(' ')
+                        |> Set
+                    AuthorizedParty = get.Required.Field "azp" Decode.string
+                    UniqueId = iss + sub
+                    Audience = aud
+                })
+    member this.HasScope scope = this.Scopes.Contains scope

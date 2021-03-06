@@ -17,18 +17,20 @@ let ClientId = "p4dJdVxaclOlk7YRqj8tYulBifQGlb6s"
 [<Literal>]
 let Audience = "https://funceng.au.auth0.com/api/v2/"
 
+let UniqueId sub = $"https://{Domain}/%s{sub}"
+
 type IUserMetaData =
     interface
     end
 
 type IIdentity =
-    [<EmitProperty("connection")>] //"Username-Password-Authentication"
+    [<EmitProperty("connection")>]
     abstract Connection: string
 
-    [<EmitProperty("provider")>] //"auth0"
+    [<EmitProperty("provider")>]
     abstract Provider: string
 
-    [<EmitProperty("user_id")>] //"600297bd0cadb70069b2e324"
+    [<EmitProperty("user_id")>]
     abstract UserId: string
 
     [<EmitProperty("isSocial")>]
@@ -47,25 +49,25 @@ type IUserDetails =
     [<EmitProperty("identities")>]
     abstract Identities: IIdentity array
 
-    [<EmitProperty("name")>] // "mental.blindfolds.on@gmail.com",
+    [<EmitProperty("name")>]
     abstract Name: string
 
-    [<EmitProperty("nickname")>] // "mental.blindfolds.on",
+    [<EmitProperty("nickname")>]
     abstract Nickname: string
 
-    [<EmitProperty("picture")>] // "https://s.gravatar.com/avatar/ef828f63e7083c1c8fcfb09471552af3?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fme.png",
+    [<EmitProperty("picture")>]
     abstract Picture: string
 
-    [<EmitProperty("updated_at")>] // "2021-02-06T01:09:38.364Z",
+    [<EmitProperty("updated_at")>]
     abstract UpdatedAt: DateTime
 
-    [<EmitProperty("user_id")>] // "auth0|600297bd0cadb70069b2e324",
+    [<EmitProperty("user_id")>]
     abstract UserId: string
 
     [<EmitProperty("user_metadata")>]
     abstract UserMetadata: IUserMetaData
 
-    [<EmitProperty("last_ip")>] // "121.200.4.122",
+    [<EmitProperty("last_ip")>]
     abstract LastIp: string
 
     [<EmitProperty("last_login")>]

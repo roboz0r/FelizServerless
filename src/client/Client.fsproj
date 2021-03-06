@@ -5,15 +5,15 @@
   <ItemGroup>
     <None Include="index.html" />
     <Compile Include="../Shared/SharedJWT.fs" />
-    <Compile Include="../Shared/SharedCounter.fs" />
+    <Compile Include="../Shared/SharedTypes.fs" />
     <Compile Include="Deferred.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="DevEnv.fs" />
-    <Compile Include="ToDoList.fs" />
     <Compile Include="Counter.fs" />
     <Compile Include="Scope.fs" />
     <Compile Include="Auth0.fs" />
     <Compile Include="AuthStatus.fs" />
+    <Compile Include="ToDoList.fs" />
     <Compile Include="UserPage.fs" />
     <Compile Include="Drawer.fs" />
     <Compile Include="App.fs" />
@@ -28,6 +28,7 @@
     <PackageReference Include="Feliz.Router" Version="3.5.0" />
     <PackageReference Include="Feliz.UseElmish" Version="1.5.0" />
     <PackageReference Include="Fable.Remoting.Client" Version="7.2.0" />
+    <PackageReference Include="Thoth.Json" Version="5.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="auth0\React\React.fsproj" />

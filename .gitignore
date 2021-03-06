@@ -206,3 +206,13 @@ out
 
 #Webpack output dir
 dist/
+
+#Environment Configuration
+.env
+
+#Paket dependency manager
+.paket/
+paket-files/
+
+#Azure Functions Dev Time Settings
+src/server/local.settings.json

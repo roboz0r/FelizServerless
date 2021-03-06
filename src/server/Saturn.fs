@@ -17,25 +17,31 @@ open FelizServerless
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open HeyRed.Mime
+open Microsoft.Extensions.FileProviders
+open FSharp.Control.Tasks
+open Giraffe
 
 module Saturn =
 
-    let staticController =
-        let filePath fileName = Path.Combine("public", fileName)
+    let mutable cheatLogger = Unchecked.defaultof<ILogger>
 
+    let staticController =
         controller {
             index
                 (fun ctx ->
                     let fileName = "index.html"
-                    Controller.appDirFile ctx (filePath fileName) (MimeTypesMap.GetMimeType fileName))
+                    Controller.appDirFile ctx (fileName) (MimeTypesMap.GetMimeType fileName))
 
             show
-                (fun ctx (fileName: string) ->
-                    Controller.appDirFile ctx (filePath fileName) (MimeTypesMap.GetMimeType fileName))
+                (fun ctx (_: string) ->
+                    Controller.appDirFile
+                        ctx
+                        (ctx.Request.Path.Value.[5..])
+                        (MimeTypesMap.GetMimeType ctx.Request.Path.Value))
 
         }
 
-    let errorHandler (ex: Exception): Giraffe.Core.HttpHandler =
+    let errorHandler (ex: Exception) : HttpHandler =
         controller {
             index (fun ctx -> Controller.text ctx ex.Message)
 
@@ -57,7 +63,7 @@ module Saturn =
                     |> Controller.text ctx)
         }
 
-    let counterImpl: ICounter =
+    let counterImpl : ICounter =
         {
             Init = fun _ -> async { return 0 }
             InitValue = fun i -> async { return i }
@@ -65,13 +71,13 @@ module Saturn =
 
     let routeNoType typeName methodName = $"/{methodName}"
 
-    let defaultHandler impl: Giraffe.Core.HttpHandler =
+    let defaultHandler impl : HttpHandler =
         Remoting.createApi ()
         |> Remoting.fromValue impl
         |> Remoting.withRouteBuilder routeNoType
         |> Remoting.buildHttpHandler
 
-    let contextHandler impl: Giraffe.Core.HttpHandler =
+    let contextHandler impl : HttpHandler =
         Remoting.createApi ()
         |> Remoting.fromContext impl
         |> Remoting.withRouteBuilder routeNoType
@@ -79,17 +85,35 @@ module Saturn =
 
     let counterHandler = defaultHandler counterImpl
 
-    let claimsImpl (ctx: HttpContext): IClaims =
+    let claimsImpl (ctx: HttpContext) : IClaims =
         {
-            GetClaims = fun _ -> async { return ctx |> tokenFromCtx |> Result.bind validateToken }
+            GetClaims =
+                fun _ ->
+                    async {
+                        let claims = ctx.GetClaims()
+                        return claims
+                    }
         }
 
     let claimsHandler = contextHandler claimsImpl
+    let toDoHandler = contextHandler ToDo.toDoImpl
+
+    let authHandler (next: HttpFunc) ctx =
+        task {
+            let authResult =
+                ctx |> tokenFromCtx |> Result.bind validateToken
+
+            ctx.Items.Add(JwtClaims, authResult)
+            return! (next ctx)
+        }
 
     let mainRouter =
         router {
+            pipe_through (CORS.cors CORS.defaultCORSConfig)
+            pipe_through authHandler
             forward "/IClaims" claimsHandler
             forward "/ICounter" counterHandler
+            forward "/IToDoItem" toDoHandler
             forward "" staticController
         }
 
@@ -111,13 +135,23 @@ module Saturn =
                }
         | _ ->
 
+            // TODO Fork Saturn and add execution_context CE custom operation
+            cheatLogger <- req.HttpContext.Logger
+            // Makes files available to the App via the HttpContext
+            // Refer to GetWebHostEnvironment extension method
+            let webHostEnv = req.HttpContext.GetWebHostEnvironment()
+            webHostEnv.WebRootPath <- Path.Combine(context.FunctionAppDirectory, "public")
+            webHostEnv.WebRootFileProvider <- new PhysicalFileProvider(webHostEnv.WebRootPath)
+
             let svcs = req.HttpContext.RequestServices
 
             req.HttpContext.RequestServices <-
                 { new IServiceProvider with
                     member __.GetService(t: Type) =
-                        if t = typeof<ExecutionContext> then box context
-                        else svcs.GetService t
+                        if t = typeof<ExecutionContext> then
+                            upcast context
+                        else
+                            svcs.GetService t
                 }
 
             req
