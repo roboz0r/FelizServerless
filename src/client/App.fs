@@ -141,6 +141,7 @@ let myTheme =
 let Router () =
     let state, dispatch = React.useElmish (init, update)
     let styles = useStyles ()
+    let drawerStyles = Drawer.useStyles()
 
     React.router [
         router.onUrlChanged (UrlChanged >> dispatch)
@@ -162,7 +163,8 @@ let Router () =
                                             iconButton.color.inherit'
                                             prop.ariaLabel "menu"
                                             prop.children [
-                                                Fable.MaterialUI.Icons.menuIcon []
+                                                if state.ShowDrawer then Fable.MaterialUI.Icons.menuOpenIcon []
+                                                else Fable.MaterialUI.Icons.menuIcon []
                                             ]
                                             prop.onClick (fun _ -> ToggleDrawer |> dispatch)
                                         ]
@@ -175,6 +177,7 @@ let Router () =
                                             | [ "users" ] -> "Users"
                                             | [ "users"; Route.Int userId ] -> (sprintf "User ID %d" userId)
                                             | [ "ToDo" ] -> "To Do List"
+                                            | [ "DevEnv"] -> "Development Environment"
                                             | _ -> "Not found"
                                             |> typography.children
                                         ]
@@ -183,7 +186,7 @@ let Router () =
                                 ]
                             ]
 
-                            Drawer.Drawer state.ShowDrawer
+                            Drawer.Drawer drawerStyles state.ShowDrawer
 
                             Html.main [
                                 Mui.toolbar []

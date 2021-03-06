@@ -22,7 +22,6 @@ type IAppState =
 [<AllowNullLiteral>]
 type IAuth0ProviderOptions =
     /// The child nodes your Provider has wrapped
-    // TODO abstract children: React.ReactNode option with get, set
     abstract children: Fable.React.ReactElement option with get, set
     /// By default this removes the code and state parameters from the url when you are redirected from the authorize page.
     /// It uses `window.history` but you might want to overwrite this if you are using a custom router, like `react-router-dom`

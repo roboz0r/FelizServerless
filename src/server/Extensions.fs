@@ -16,8 +16,6 @@ let ExecutionContextName = "ExecutionContext"
 
 type HttpContext with
 
-    // TODO Fork Giraffe and put extensions in there
-
     /// <summary>
     /// Returns the Azure Functions Execution Context
     /// </summary>

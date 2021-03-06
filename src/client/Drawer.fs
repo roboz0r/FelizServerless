@@ -7,41 +7,60 @@ open Feliz.UseElmish
 open Fable.MaterialUI.Icons
 open Feliz.MaterialUI
 
-let drawerWidth = 240
+type Styles =
+    {
+        Hide: string
+        Drawer: string
+        DrawerPaper: string
+    }
 
-let useStyles: unit -> _ =
+let useStyles : unit -> _ =
+    let drawerWidth = 240
+
     Styles.makeStyles
         (fun styles theme ->
-            {|
-                hide = styles.create [ style.display.none ]
-                drawer =
+            {
+                Hide = styles.create [ style.display.none ]
+                Drawer =
                     styles.create [
                         style.width drawerWidth
                         style.flexShrink 0
                         style.marginRight (theme.spacing (1))
                     ]
-                drawerPaper =
+                DrawerPaper =
                     styles.create [
                         style.width drawerWidth
                     ]
-            |})
+            })
+
+let private menuItem (currentUrl: string list, path: string, displayText: string, icon: ReactElement) =
+    Mui.listItem [
+        prop.onClick (fun _ -> Router.navigate (path))
+        listItem.button true
+        listItem.selected (
+            match currentUrl with
+            | [ x ] when x = path -> true
+            | _ -> false
+        )
+        listItem.children [
+            Mui.listItemIcon [ icon ]
+            Mui.listItemText displayText
+        ]
+    ]
 
 [<ReactComponent>]
-let Drawer showDrawer =
-    //TODO Figure out aligning the drawer to not cover App Bar
-    // https://material-ui.com/components/drawers/#permanent-drawer
-
-    let classes = useStyles ()
+let Drawer (styles: Styles) showDrawer =
+    let currentUrl = Router.currentUrl ()
 
     Mui.drawer [
         prop.className (
             if showDrawer then
-                classes.drawer
+                styles.Drawer
             else
-                classes.hide
+                styles.Hide
         )
         drawer.variant.permanent
-        drawer.classes.paper classes.drawerPaper
+        drawer.classes.paper styles.DrawerPaper
         drawer.anchor.left
         drawer.children [
             Mui.toolbar []
@@ -50,35 +69,20 @@ let Drawer showDrawer =
                 Mui.listItem [
                     prop.onClick (fun _ -> Router.navigate (""))
                     listItem.button true
+                    listItem.selected (
+                        match currentUrl with
+                        | []
+                        | [ "" ] -> true
+                        | _ -> false
+                    )
                     listItem.children [
                         Mui.listItemIcon [ homeIcon [] ]
                         Mui.listItemText "Home"
                     ]
                 ]
-                Mui.listItem [
-                    prop.onClick (fun _ -> Router.navigate ("users"))
-                    listItem.button true
-                    listItem.children [
-                        Mui.listItemIcon [ groupIcon [] ]
-                        Mui.listItemText "Users"
-                    ]
-                ]
-                Mui.listItem [
-                    prop.onClick (fun _ -> Router.navigate ("DevEnv"))
-                    listItem.button true
-                    listItem.children [
-                        Mui.listItemIcon [ groupIcon [] ]
-                        Mui.listItemText "Development"
-                    ]
-                ]
-                Mui.listItem [
-                    prop.onClick (fun _ -> Router.navigate ("ToDo"))
-                    listItem.button true
-                    listItem.children [
-                        Mui.listItemIcon [ assignmentIcon [] ]
-                        Mui.listItemText "To Do List"
-                    ]
-                ]
+                menuItem (currentUrl, "users", "Users", (groupIcon []))
+                menuItem (currentUrl, "DevEnv", "Development", (groupIcon []))
+                menuItem (currentUrl, "ToDo", "To Do List", (assignmentIcon []))
             ]
         ]
     ]
