@@ -4,27 +4,23 @@ open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.AspNetCore.Http
 open Microsoft.Azure.Cosmos
 open FelizServerless
-open System.Net
-open Newtonsoft.Json
 open System
+open Thoth.Json.Net
+open FelizServerless.Server.Cosmos
 
 module ToDo =
 
-    let private parseGuid s = System.Guid.ParseExact(s, "D")
+    type UserId with
+        static member Encode(id: UserId) = Encode.string id.Value
 
-    // Using camelCase for JSON fields to be consistent with Google's style guide.
-    // PascalCase appears uncommon for JSON naming
+        static member Decode path json =
+            Decode.string path json |> Result.map UserId
 
-    [<CLIMutable>]
     type private CosmosToDoItem =
         {
-            [<JsonProperty(PropertyName = "id")>]
-            Id: string
-            [<JsonProperty(PropertyName = "userId")>]
+            Id: ToDoId
             UserId: string
-            [<JsonProperty(PropertyName = "description")>]
             Description: string
-            [<JsonProperty(PropertyName = "completed")>]
             Completed: bool
         }
 
@@ -34,7 +30,7 @@ module ToDo =
 
             {
                 UserId = userId
-                Id = item.Id.ToString()
+                Id = item.Id
                 Description = item.Description
                 Completed = item.Completed
             }
@@ -42,10 +38,26 @@ module ToDo =
         let To item : ToDoItem =
             {
                 UserId = UserId item.UserId
-                Id = parseGuid item.Id
+                Id = item.Id
                 Description = item.Description
                 Completed = item.Completed
             }
+
+    let extraCoders =
+        Extra.empty
+        |> Extra.withCustom UserId.Encode UserId.Decode
+
+    let inline private autoEncoder<'T> =
+        Encode.Auto.generateEncoderCached<'T> (CamelCase, extraCoders, true)
+
+    let inline private autoDecoder<'T> =
+        Decode.Auto.generateDecoderCached<'T> (CamelCase, extraCoders)
+    // Using camelCase for JSON fields to be consistent with Google's style guide.
+    // PascalCase appears uncommon for JSON naming
+
+    type ToDoItem with
+        static member Encode = autoEncoder<ToDoItem>
+        static member Decode = autoDecoder<ToDoItem>
 
     let toDoContainerReq =
         {
@@ -54,7 +66,7 @@ module ToDo =
             PartitionKeyPath = "/userId"
         }
 
-    let toDoImpl (ctx: HttpContext) : IToDoItem =
+    let toDoImpl (client: CosmosClient) (ctx: HttpContext) : IToDoItem =
         let inline returnError err =
             fun _ -> async { return Error(AuthError err) }
 
@@ -68,7 +80,7 @@ module ToDo =
                         match exs.InnerExceptions.Count with
                         | 1 ->
                             match exs.InnerException with
-                            | :? CosmosException as ex -> FuncEngDB.handleCosmosException ex
+                            | :? CosmosException as ex -> handleCosmosException ex
                             | ex -> ex.Message |> CosmosError.Other
                         | _ ->
                             [
@@ -79,31 +91,26 @@ module ToDo =
 
                     return Error(DBError err)
                 }
-            | :? CosmosException as ex ->
-                async {
-                    return
-                        FuncEngDB.handleCosmosException ex
-                        |> DBError
-                        |> Error
-                }
+            | :? CosmosException as ex -> async { return handleCosmosException ex |> DBError |> Error }
 
         let container () =
-            FuncEngDB.getContainerAsync toDoContainerReq
+            getContainerAsync client toDoContainerReq
 
         match ctx.GetClaims() with
         | Ok claims ->
-            let userId = claims.UniqueId
+            let userId = UserId claims.UniqueId
 
             let listQry (container: Container) =
+                let options = CosmosLinqSerializerOptions(PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase)
                 let qry =
                     query {
-                        for item in container.GetItemLinqQueryable<CosmosToDoItem>(true) do
-                            where (item.UserId = userId)
+                        for item in container.GetItemLinqQueryable<CosmosToDoItem>(true, linqSerializerOptions = options) do
+                            where (item.UserId = userId.Value)
                             select item
                     }
 
-                qry
-                |> Seq.toList
+                qry 
+                |> Seq.toList 
                 |> List.map CosmosToDoItem.To
                 |> Ok
 
@@ -122,47 +129,42 @@ module ToDo =
                     fun item ->
                         fun item ->
                             task {
-                                let item = CosmosToDoItem.From item
                                 let! container = container ()
                                 let! itemResp = container.CreateItemAsync(item)
-                                return Ok(parseGuid itemResp.Resource.Id)
+                                return Ok(itemResp.Resource.Id)
                             }
                             |> Async.AwaitTask
-                        |> tryProcess item
+                        |> tryProcess (CosmosToDoItem.From item)
 
                 Update =
                     fun item ->
                         fun item ->
                             task {
-                                let item = CosmosToDoItem.From item
                                 let! container = container ()
                                 let! itemResp = container.UpsertItemAsync(item)
-                                return Ok(parseGuid itemResp.Resource.Id)
+                                return Ok(itemResp.Resource.Id)
                             }
                             |> Async.AwaitTask
-                        |> tryProcess item
+                        |> tryProcess (CosmosToDoItem.From item)
 
                 Delete =
                     fun item ->
                         fun item ->
                             task {
-                                let item = CosmosToDoItem.From item
                                 let! container = container ()
-
-                                let! _ = container.DeleteItemAsync(item.Id, PartitionKey(item.UserId))
-
-                                return Ok(parseGuid item.Id)
+                                let! _ = container.DeleteItemAsync(item.Id.ToString(), PartitionKey(userId.Value))
+                                return Ok(item.Id)
                             }
                             |> Async.AwaitTask
-                        |> tryProcess item
+                        |> tryProcess (CosmosToDoItem.From item)
 
                 GetItem =
                     fun id ->
                         fun id ->
                             task {
                                 let! container = container ()
-                                let! itemResp = container.ReadItemAsync(id.ToString(), PartitionKey(userId))
-                                return Ok itemResp.Resource
+                                let! itemResp = container.ReadItemAsync(id.ToString(), PartitionKey(userId.Value))
+                                return Ok (CosmosToDoItem.To itemResp.Resource)
                             }
                             |> Async.AwaitTask
                         |> tryProcess id

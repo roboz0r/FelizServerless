@@ -6,13 +6,15 @@
   <ItemGroup>
     <Compile Include="../Shared/SharedJWT.fs" />
     <Compile Include="../Shared/SharedTypes.fs" />
+    <Compile Include="../Shared/SharedHazop.fs" />
     <Compile Include="Reraise.fs" />
     <Compile Include="JWTValidation.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="Environment.fs" />
     <Compile Include="CosmosWrapper.fs" />
-    <Compile Include="db.fs" />
     <Compile Include="ToDoImpl.fs" />
+    <Compile Include="HazopImpl.fs" />
+    <Compile Include="db.fs" />
     <Compile Include="Saturn.fs" />
   </ItemGroup>
   <ItemGroup>

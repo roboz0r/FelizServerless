@@ -96,7 +96,9 @@ module Saturn =
         }
 
     let claimsHandler = contextHandler claimsImpl
-    let toDoHandler = contextHandler ToDo.toDoImpl
+
+    let toDoHandler =
+        contextHandler (ToDo.toDoImpl Cosmos.FuncEngDB.client)
 
     let authHandler (next: HttpFunc) ctx =
         task {

@@ -1,9 +1,18 @@
-module FelizServerless.Server.Cosmos
+[<AutoOpen>]
+module FelizServerless.Server.Cosmos.Extensions
 
 open System
 open Microsoft.Azure.Cosmos
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open FelizServerless
+open System.Net
+
+type DbContainerReq =
+    {
+        Database: string
+        Container: string
+        PartitionKeyPath: string
+    }
 
 type CosmosClient with
     member this.CreateDatabaseIfNotExistsAsyncResult(id, ?throughput: int, ?requestOptions, ?cancellationToken) =
@@ -66,3 +75,23 @@ type Database with
             with ex -> return Error(CosmosError.Other ex.Message)
 
         }
+
+let getContainerAsync (client: CosmosClient) (req: DbContainerReq) =
+    task {
+        let! db = client.CreateDatabaseIfNotExistsAsync(req.Database)
+
+        let props =
+            ContainerProperties(req.Container, req.PartitionKeyPath)
+
+        let! containerResp = db.Database.CreateContainerIfNotExistsAsync(props)
+        return containerResp.Container
+    }
+
+let handleCosmosException (ex: CosmosException) =
+    match ex.StatusCode with
+    | HttpStatusCode.BadRequest -> CosmosError.BadRequest ex.Message
+    | HttpStatusCode.Forbidden -> CosmosError.Forbidden ex.Message
+    | HttpStatusCode.Conflict -> CosmosError.Conflict ex.Message
+    | HttpStatusCode.RequestEntityTooLarge -> CosmosError.RequestEntityTooLarge ex.Message
+    | HttpStatusCode.TooManyRequests -> CosmosError.TooManyRequests ex.Message
+    | _ -> CosmosError.Other ex.Message
