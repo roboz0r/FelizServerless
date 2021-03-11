@@ -7,36 +7,25 @@ open System.IO
 open System.Text
 open Thoth.Json.Net
 open FelizServerless.Server
+open FelizServerless
+
 
 module FuncEngDB =
 
     let utf8 = new UTF8Encoding(false, true)
 
-    type String with
-        static member ToStream (s:string) =
-            let stream = new MemoryStream()
-            let writer = new StreamWriter(stream, utf8)
-            writer.Write(s)
-            writer.Flush()
-            stream.Position <- 0L
-            stream
-
-    let inline private encoder<'T> extraCoders = Encode.Auto.generateEncoderCached<'T> (CamelCase, extraCoders, true)
+    let inline private encoder<'T> extraCoders = Encode.Auto.generateEncoderCached<'T> (CamelCase, extraCoders, false)
     let inline private decoder<'T> extraCoders = Decode.Auto.generateDecoderCached<'T> (CamelCase, extraCoders)
 
     let private serialiser = 
-        let extraCoders = ToDo.extraCoders
+        let extraCoders = Json.extraCoders
         {
             new CosmosSerializer() with
                 member __.FromStream<'T> (stream:Stream) = 
                     use stream = stream
                     use reader = new StreamReader(stream, utf8)
                     let json = reader.ReadToEnd()
-                    Decode.fromString (decoder<'T> extraCoders) json
-                    |> function
-                        | Ok x -> x
-                        | Error err -> failwith err
-
+                    Decode.unsafeFromString (decoder<'T> extraCoders) json
 
                 member __.ToStream<'T> (input:'T) = 
                   let json = encoder extraCoders input

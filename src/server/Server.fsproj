@@ -7,6 +7,7 @@
     <Compile Include="../Shared/SharedJWT.fs" />
     <Compile Include="../Shared/SharedTypes.fs" />
     <Compile Include="../Shared/SharedHazop.fs" />
+    <Compile Include="../Shared/JsonCoders.fs" />
     <Compile Include="Reraise.fs" />
     <Compile Include="JWTValidation.fs" />
     <Compile Include="Extensions.fs" />
@@ -26,7 +27,8 @@
     <PackageReference Include="JWT" Version="8.0.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.17.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="Thoth.Json.Net" Version="5.0.0" />
+    <PackageReference Include="Thoth.Json.Giraffe" Version="4.3.0" />
+    <!-- <PackageReference Include="Thoth.Json.Net" Version="5.0.0" /> -->
   </ItemGroup>
   <ItemGroup>
     <None Include="./../../dist/**" CopyToOutputDirectory="PreserveNewest" LinkBase="public\" />

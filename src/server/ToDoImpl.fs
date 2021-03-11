@@ -5,16 +5,9 @@ open Microsoft.AspNetCore.Http
 open Microsoft.Azure.Cosmos
 open FelizServerless
 open System
-open Thoth.Json.Net
 open FelizServerless.Server.Cosmos
 
 module ToDo =
-
-    type UserId with
-        static member Encode(id: UserId) = Encode.string id.Value
-
-        static member Decode path json =
-            Decode.string path json |> Result.map UserId
 
     type private CosmosToDoItem =
         {
@@ -42,22 +35,6 @@ module ToDo =
                 Description = item.Description
                 Completed = item.Completed
             }
-
-    let extraCoders =
-        Extra.empty
-        |> Extra.withCustom UserId.Encode UserId.Decode
-
-    let inline private autoEncoder<'T> =
-        Encode.Auto.generateEncoderCached<'T> (CamelCase, extraCoders, true)
-
-    let inline private autoDecoder<'T> =
-        Decode.Auto.generateDecoderCached<'T> (CamelCase, extraCoders)
-    // Using camelCase for JSON fields to be consistent with Google's style guide.
-    // PascalCase appears uncommon for JSON naming
-
-    type ToDoItem with
-        static member Encode = autoEncoder<ToDoItem>
-        static member Decode = autoDecoder<ToDoItem>
 
     let toDoContainerReq =
         {
@@ -127,11 +104,13 @@ module ToDo =
 
                 Add =
                     fun item ->
-                        fun item ->
+                        fun (item:CosmosToDoItem) ->
                             task {
+                                let newId = Guid.NewGuid()
+                                let newItem = { item with Id = newId }
                                 let! container = container ()
-                                let! itemResp = container.CreateItemAsync(item)
-                                return Ok(itemResp.Resource.Id)
+                                let! itemResp = container.CreateItemAsync(newItem)
+                                return Ok(item.Id, itemResp.Resource.Id)
                             }
                             |> Async.AwaitTask
                         |> tryProcess (CosmosToDoItem.From item)
@@ -148,15 +127,15 @@ module ToDo =
                         |> tryProcess (CosmosToDoItem.From item)
 
                 Delete =
-                    fun item ->
-                        fun item ->
+                    fun id ->
+                        fun id ->
                             task {
                                 let! container = container ()
-                                let! _ = container.DeleteItemAsync(item.Id.ToString(), PartitionKey(userId.Value))
-                                return Ok(item.Id)
+                                let! _ = container.DeleteItemAsync(id.ToString(), PartitionKey(userId.Value))
+                                return Ok(id)
                             }
                             |> Async.AwaitTask
-                        |> tryProcess (CosmosToDoItem.From item)
+                        |> tryProcess id
 
                 GetItem =
                     fun id ->

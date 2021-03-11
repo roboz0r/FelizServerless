@@ -6,6 +6,7 @@
     <None Include="index.html" />
     <Compile Include="../Shared/SharedJWT.fs" />
     <Compile Include="../Shared/SharedTypes.fs" />
+    <Compile Include="../Shared/SharedHazop.fs" />
     <Compile Include="Deferred.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="DevEnv.fs" />
@@ -14,6 +15,8 @@
     <Compile Include="Auth0.fs" />
     <Compile Include="AuthStatus.fs" />
     <Compile Include="ToDoList.fs" />
+    <Compile Include="NewHazopProject.fs" />
+    <Compile Include="HazopPage.fs" />
     <Compile Include="UserPage.fs" />
     <Compile Include="Drawer.fs" />
     <Compile Include="App.fs" />

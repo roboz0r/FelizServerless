@@ -16,6 +16,7 @@ type State =
         ToDoList: ToDoList.State
         AuthState: AuthStatus.State
         UserPage: UserPage.State
+        HazopPage: Hazop.State
     }
 
 type Msg =
@@ -25,6 +26,7 @@ type Msg =
     | ToDo of ToDoList.Msg
     | AuthStatus of AuthStatus.Msg
     | UserPage of UserPage.Msg
+    | HazopPage of Hazop.Msg
 
 let init () =
     let counter, cmd = Counter.init ()
@@ -41,6 +43,7 @@ let init () =
         ToDoList = ToDoList.init ()
         AuthState = authState
         UserPage = UserPage.init authState
+        HazopPage = Hazop.init()
     },
     cmd |> Cmd.map Counter
 
@@ -61,19 +64,19 @@ let update msg state =
     | AuthStatus msg ->
         let auth = AuthStatus.update msg state.AuthState
 
-        let page, cmd =
+        let userPage, userCmd1 =
             UserPage.update (UserPage.SetAuthStatus auth) state.UserPage
 
-        let page, cmd2 =
+        let userPage, userCmd2 =
             match auth.Token with
             | Some token -> 
                 let msg = UserPage.SetApi(UserPage.userApi token)
-                UserPage.update msg page
-            | None -> page, Cmd.none
+                UserPage.update msg userPage
+            | None -> userPage, Cmd.none
 
-        let userCmds = Cmd.map UserPage (Cmd.batch [ cmd; cmd2 ])
+        let userCmds = Cmd.map UserPage (Cmd.batch [ userCmd1; userCmd2 ])
 
-        let todo, cmd = 
+        let todo, toDoCmd = 
             match auth.Token, auth.AuthState with
             | Some token, AuthState.Authenticated user -> 
                 let userId = UserId (Auth0.UniqueId user.sub.Value)
@@ -81,34 +84,52 @@ let update msg state =
                 ToDoList.update msg state.ToDoList
             | _ -> ToDoList.update ToDoList.ClearApi state.ToDoList
 
+        let hazop, hazopCmd = 
+            match auth.Token, auth.AuthState with
+            | Some token, AuthState.Authenticated _ -> 
+                let msg = Hazop.SetApi(Hazop.hazopApi token)
+                Hazop.update msg state.HazopPage
+            | _ -> Hazop.update Hazop.ClearApi state.HazopPage
+
         { state with
             AuthState = auth
-            UserPage = page
+            UserPage = userPage
             ToDoList = todo
-        }, Cmd.batch [ userCmds; (Cmd.map ToDo cmd) ]
+            HazopPage = hazop
+        }, Cmd.batch [ userCmds; (Cmd.map ToDo toDoCmd); (Cmd.map HazopPage hazopCmd) ]
         
     | UserPage msg ->
         let page, cmd = UserPage.update msg state.UserPage
         { state with UserPage = page }, Cmd.map UserPage cmd
+    | HazopPage msg -> 
+        let page, cmd = Hazop.update msg state.HazopPage
+        { state with HazopPage = page }, Cmd.map HazopPage cmd
 
 
 let drawerWidth = 240
 
+type Styles = {
+    Root:string
+    AppBar:string
+    MenuButton:string
+    Title:string
+}
+
 let useStyles: unit -> _ =
     Styles.makeStyles
         (fun styles theme ->
-            {|
-                root = styles.create [ style.display.flex ]
-                appBar =
+            {
+                Root = styles.create [ style.display.flex ]
+                AppBar =
                     styles.create [
                         style.zIndex (theme.zIndex.drawer + 1)
                     ]
-                menuButton =
+                MenuButton =
                     styles.create [
                         style.marginRight (theme.spacing (2))
                     ]
-                title = styles.create [ style.flexGrow 1 ]
-            |})
+                Title = styles.create [ style.flexGrow 1 ]
+            })
 
 //    + theme.transitions.create (
 //        [| "margin"; "width" |],
@@ -134,8 +155,52 @@ let myTheme =
                 style.outlineStyle.auto
                 style.outlineColor "primary"
             ]
+            theme.props.muiTextField [ 
+                textField.margin.normal
+                textField.variant.filled
+            ]
+            theme.overrides.muiPaper.rounded [
+                style.padding 10
+            ]
         ]
     )
+
+[<ReactComponent>]
+let private AppBar styles state dispatch = 
+    Mui.appBar [
+        appBar.position.fixed'
+        prop.className styles.AppBar
+        appBar.children [
+            Mui.toolbar [
+                Mui.iconButton [
+                    iconButton.edge.start
+                    prop.className styles.MenuButton
+                    iconButton.color.inherit'
+                    prop.ariaLabel "menu"
+                    prop.children [
+                        if state.ShowDrawer then Fable.MaterialUI.Icons.menuOpenIcon []
+                        else Fable.MaterialUI.Icons.menuIcon []
+                    ]
+                    prop.onClick (fun _ -> ToggleDrawer |> dispatch)
+                ]
+                Mui.typography [
+                    typography.variant.h6
+                    prop.className styles.Title
+
+                    match state.CurrentUrl with
+                    | [] -> "Home"
+                    | [ "users" ] -> "Users"
+                    | [ "users"; Route.Int userId ] -> (sprintf "User ID %d" userId)
+                    | [ "ToDo" ] -> "To Do List"
+                    | [ "DevEnv"] -> "Development Environment"
+                    | [ "Hazop"] -> "Hazop Study"
+                    | _ -> "Not found"
+                    |> typography.children
+                ]
+                AuthStatus.LogIn state.AuthState (AuthStatus >> dispatch)
+            ]
+        ]
+    ]
 
 [<ReactComponent>]
 let Router () =
@@ -150,46 +215,14 @@ let Router () =
                 themeProvider.theme myTheme
                 themeProvider.children [
                     Html.div [
-                        prop.className styles.root
+                        prop.className styles.Root
                         prop.children [
-                            Mui.appBar [
-                                appBar.position.fixed'
-                                prop.className styles.appBar
-                                appBar.children [
-                                    Mui.toolbar [
-                                        Mui.iconButton [
-                                            iconButton.edge.start
-                                            prop.className styles.menuButton
-                                            iconButton.color.inherit'
-                                            prop.ariaLabel "menu"
-                                            prop.children [
-                                                if state.ShowDrawer then Fable.MaterialUI.Icons.menuOpenIcon []
-                                                else Fable.MaterialUI.Icons.menuIcon []
-                                            ]
-                                            prop.onClick (fun _ -> ToggleDrawer |> dispatch)
-                                        ]
-                                        Mui.typography [
-                                            typography.variant.h6
-                                            prop.className styles.title
-
-                                            match state.CurrentUrl with
-                                            | [] -> "Home"
-                                            | [ "users" ] -> "Users"
-                                            | [ "users"; Route.Int userId ] -> (sprintf "User ID %d" userId)
-                                            | [ "ToDo" ] -> "To Do List"
-                                            | [ "DevEnv"] -> "Development Environment"
-                                            | _ -> "Not found"
-                                            |> typography.children
-                                        ]
-                                        AuthStatus.LogIn state.AuthState (AuthStatus >> dispatch)
-                                    ]
-                                ]
-                            ]
+                            AppBar styles state dispatch
 
                             Drawer.Drawer drawerStyles state.ShowDrawer
 
                             Html.main [
-                                Mui.toolbar []
+                                Mui.toolbar [] //Empty toolbar to bump down the content below actual toolbar.
                                 match state.CurrentUrl with
                                 | [] ->
                                     Html.div [
@@ -199,6 +232,7 @@ let Router () =
                                 | [ "users"; Route.Int userId ] -> Html.h1 (sprintf "User ID %d" userId)
                                 | [ "DevEnv" ] -> DevEnv.View()
                                 | [ "ToDo" ] -> ToDoList.View state.ToDoList (ToDo >> dispatch)
+                                | [ "Hazop" ] -> Hazop.View state.HazopPage (HazopPage >> dispatch)
                                 | _ -> Html.h1 "Not found"
                             ]
                         ]

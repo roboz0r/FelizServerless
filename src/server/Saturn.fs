@@ -23,7 +23,8 @@ open Giraffe
 
 module Saturn =
 
-    let mutable cheatLogger = Unchecked.defaultof<ILogger>
+    // Just there for quick testing where a public mutable logger is easy to call anywhere.
+    // let mutable cheatLogger = Unchecked.defaultof<ILogger>
 
     let staticController =
         controller {
@@ -100,6 +101,9 @@ module Saturn =
     let toDoHandler =
         contextHandler (ToDo.toDoImpl Cosmos.FuncEngDB.client)
 
+    let hazopHandler =
+        contextHandler (HazopProject.impl Cosmos.FuncEngDB.client)
+
     let authHandler (next: HttpFunc) ctx =
         task {
             let authResult =
@@ -116,8 +120,12 @@ module Saturn =
             forward "/IClaims" claimsHandler
             forward "/ICounter" counterHandler
             forward "/IToDoItem" toDoHandler
+            forward "/IHazopProject" hazopHandler
             forward "" staticController
         }
+
+    let thothSerialiser =
+        Thoth.Json.Giraffe.ThothSerializer(Thoth.Json.Net.CaseStrategy.CamelCase, Json.extraCoders, false)
 
     [<FunctionName("SaturnRouter")>]
     let saturnRouter
@@ -138,7 +146,10 @@ module Saturn =
         | _ ->
 
             // TODO Fork Saturn and add execution_context CE custom operation
-            cheatLogger <- req.HttpContext.Logger
+
+            // Just there for quick testing where a public mutable logger is easy to call anywhere.
+            // cheatLogger <- req.HttpContext.Logger
+
             // Makes files available to the App via the HttpContext
             // Refer to GetWebHostEnvironment extension method
             let webHostEnv = req.HttpContext.GetWebHostEnvironment()
@@ -163,4 +174,5 @@ module Saturn =
                 use_router mainRouter
                 error_handler errorHandler
                 not_found_handler notFoundHandler
+                use_json_serializer thothSerialiser
                }

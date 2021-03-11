@@ -1,75 +1,56 @@
 namespace FelizServerless.Hazop
 
 open System
-open System.Collections.Immutable
 open FelizServerless
 
 type ProjectId =
-    private
     | ProjectId of Guid
     member this.Value =
         let (ProjectId id) = this
         id
 
-    static member OfGuid id = ProjectId id
-
 type DocumentId =
-    private
     | DocumentId of Guid
     member this.Value =
         let (DocumentId id) = this
         id
 
-    static member OfGuid id = DocumentId id
-
 type SystemId =
-    private
     | SystemId of Guid
     member this.Value =
         let (SystemId id) = this
         id
 
-    static member OfGuid id = SystemId id
-
 type PersonId =
-    private
     | PersonId of Guid
     member this.Value =
         let (PersonId id) = this
         id
 
-    static member OfGuid id = PersonId id
-
 type NodeId =
-    private
     | NodeId of Guid
     member this.Value =
         let (NodeId id) = this
         id
 
-    static member OfGuid id = NodeId id
-
 type GuidewordSetId =
-    private
     | GuidewordSetId of Guid
     member this.Value =
         let (GuidewordSetId id) = this
         id
 
-    static member OfGuid id = GuidewordSetId id
-
 type GuidewordId =
-    private
     | GuidewordId of Guid
     member this.Value =
         let (GuidewordId id) = this
         id
 
-    static member OfGuid id = GuidewordId id
+// TODO Make Immutable array once Block added to F# / Fable
+// Ref https://github.com/fsharp/fslang-suggestions/issues/619
 
 type Image =
     {
-        Data: ImmutableArray<byte>
+        Data: array<byte> 
         Filename: string
         MIMEType: string
     }
@@ -92,6 +73,7 @@ type Document =
         Rev: string
     }
 
+[<RequireQualifiedAccess>]
 type NodeStatus =
     | NotStarted
     | InProgress
@@ -142,9 +124,9 @@ type GuidewordSet =
 type Company =
     {
         Name: string
-        Logo: Image
+        Logo: Image option
         Phone: string
-        Address: Address
+        Address: Address option
     }
 
 type Project =
@@ -158,11 +140,13 @@ type Project =
         GuidewordSets: GuidewordSet list
     }
 
+type HazopError = HazopError of string
+
 type IHazopProject =
     {
-        List: unit -> Async<Result<Project list, ServerError>>
-        Add: Project -> Async<Result<ProjectId, ServerError>>
-        Update: Project -> Async<Result<ProjectId, ServerError>>
-        Delete: Project -> Async<Result<ProjectId, ServerError>>
-        GetItem: ProjectId -> Async<Result<Project, ServerError>>
+        List: unit -> Async<Result<Project list, HazopError>>
+        Add: Project -> Async<Result<ProjectId * ProjectId, HazopError>>
+        Update: Project -> Async<Result<ProjectId, HazopError>>
+        Delete: ProjectId -> Async<Result<ProjectId, HazopError>>
+        GetItem: ProjectId -> Async<Result<Project, HazopError>>
     }

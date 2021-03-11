@@ -83,6 +83,7 @@ let Drawer (styles: Styles) showDrawer =
                 menuItem (currentUrl, "users", "Users", (groupIcon []))
                 menuItem (currentUrl, "DevEnv", "Development", (groupIcon []))
                 menuItem (currentUrl, "ToDo", "To Do List", (assignmentIcon []))
+                menuItem (currentUrl, "Hazop", "Hazop Study", (Html.none))
             ]
         ]
     ]

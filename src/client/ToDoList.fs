@@ -29,11 +29,12 @@ let init () =
 
 type Msg =
     | Add of ToDoItem
-    | Resolve of Result<ToDoItem, ToDoError>
-    | ResolveRemove of Result<ToDoId, ToDoError>
+    | ResolveAdd of Result<ToDoId * ToDoId, ToDoError>
     | Update of ToDoItem
-    | Remove of ToDoItem
-    | AddItemChanged of string
+    | Resolve of Result<ToDoItem, ToDoError>
+    | Remove of ToDoId
+    | ResolveRemove of Result<ToDoId, ToDoError>
+    | NewItemChanged of string
     | SetApi of IToDoItem * UserId
     | ClearApi
     | SetItems of ToDoItem list
@@ -44,36 +45,29 @@ let toDoApi =
 
 let update msg state : State * Cmd<_> =
 
-    let resolveItem item =
-        (function
-        | Ok id -> Resolve(Ok item)
-        | Error x ->
-            {
-                Id = item.Id
-                Message = sprintf "%A" x
-            }
-            |> Error
-            |> Resolve)
+    let mapError id =
+        Result.mapError (fun (x: ServerError) -> { Id = id; Message = sprintf "%A" x })
 
     match msg with
     | Add item ->
+
         { state with
             Items = (InProgress item) :: state.Items
             NewItemText = ""
             NewItemId = Guid.NewGuid()
         },
         match state.ToDoApi with
-        | Some api -> Cmd.OfAsync.perform api.Add item (resolveItem item)
+        | Some api -> Cmd.OfAsync.perform api.Add item (mapError item.Id >> ResolveAdd)
         | None -> Cmd.none
-    | Resolve item ->
+    | ResolveAdd res ->
         { state with
             Items =
                 state.Items
                 |> List.map
                     (fun x ->
-                        match x, item with
-                        | InProgress x, Ok y when x.Id = y.Id -> Resolved item
-                        | InProgress x, Error y when x.Id = y.Id -> Resolved item
+                        match x, res with
+                        | InProgress x, Ok (oldId, newId) when x.Id = oldId -> Resolved(Ok { x with Id = newId })
+                        | InProgress x, Error y when x.Id = y.Id -> Resolved(Error y)
                         | _ -> x)
         },
         Cmd.none
@@ -89,45 +83,53 @@ let update msg state : State * Cmd<_> =
                         | _ -> x)
         },
         match state.ToDoApi with
-        | Some api -> Cmd.OfAsync.perform api.Update item (resolveItem item)
+        | Some api ->
+            Cmd.OfAsync.perform
+                api.Update
+                item
+                (mapError item.Id
+                 >> Result.map (fun _ -> item)
+                 >> Resolve)
 
         | None -> Cmd.none
-
-    | Remove item ->
-        let mutable sendCmd = false
-
+    | Resolve item ->
         { state with
             Items =
                 state.Items
                 |> List.map
                     (fun x ->
-                        match x with
-                        | Resolved (Ok x) when x.Id = item.Id ->
-                            sendCmd <- true
-                            InProgress x
+                        match x, item with
+                        | InProgress x, Ok y when x.Id = y.Id -> Resolved item
+                        | InProgress x, Error y when x.Id = y.Id -> Resolved item
                         | _ -> x)
-                |> List.filter
+        },
+        Cmd.none
+    | Remove id ->
+        let mutable sendCmd = false
+
+        { state with
+            Items =
+                state.Items
+                |> List.choose
                     (fun x ->
                         match x with
-                        | Resolved (Error x) when x.Id = item.Id -> false
-                        | _ -> true)
+                        | Resolved (Ok x) when x.Id = id ->
+                            sendCmd <- true
+                            Some(InProgress x)
+                        | Resolved (Error x) when x.Id = id -> None
+                        | _ -> Some x)
         },
         match state.ToDoApi, sendCmd with
         | Some api, true ->
             Cmd.OfAsync.perform
                 api.Delete
-                item
-                (Result.mapError
-                    (fun x ->
-                        {
-                            Id = item.Id
-                            Message = (sprintf "%A" x)
-                        })
+                id
+                (Result.mapError (fun x -> { Id = id; Message = (sprintf "%A" x) })
                  >> ResolveRemove)
 
         | _ -> Cmd.none
 
-    | AddItemChanged s -> { state with NewItemText = s }, Cmd.none
+    | NewItemChanged s -> { state with NewItemText = s }, Cmd.none
     | SetApi (api, userId) ->
         { state with
             ToDoApi = Some api
@@ -152,18 +154,12 @@ let update msg state : State * Cmd<_> =
     | ResolveRemove resp ->
         let items =
             state.Items
-            |> List.filter
+            |> List.choose
                 (fun x ->
                     match x, resp with
-                    | InProgress x, Ok id when x.Id = id -> false
-                    | _ -> true)
-            |> List.map
-                (fun x ->
-                    match x, resp with
-                    | InProgress x, Error y when x.Id = y.Id -> Resolved(Error y)
-                    | x, _ -> x
-
-                    )
+                    | InProgress x, Error y when x.Id = y.Id -> Some(Resolved(Error y))
+                    | InProgress x, Ok id when x.Id = id -> None
+                    | _ -> Some x)
 
         { state with Items = items }, Cmd.none
     | RefreshList ->
@@ -213,7 +209,7 @@ let private toDoView (item: Deferred<Result<ToDoItem, ToDoError>, ToDoItem>) dis
                         button.children [ doneIcon [] ]
                     ]
                 Mui.button [
-                    prop.onClick (fun _ -> item |> Remove |> dispatch)
+                    prop.onClick (fun _ -> item.Id |> Remove |> dispatch)
                     button.children [ deleteIcon [] ]
                 ]
             ]
@@ -250,7 +246,7 @@ let View state dispatch =
                 textField.label "Add item"
                 textField.variant.filled
                 textField.defaultValue state.NewItemText
-                textField.onChange (AddItemChanged >> dispatch)
+                textField.onChange (NewItemChanged >> dispatch)
             ]
             Mui.button [
                 prop.onClick

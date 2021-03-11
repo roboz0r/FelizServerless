@@ -43,19 +43,12 @@ type ToDoItem =
         Description: string
         Completed: bool
     }
-    // static member sample = 
-    //     let x = 
-    //         {
-    //             Id = System.Guid.Empty
-    //             UserId = UserId "some Id"
-    //             Description = ""
-    //             Completed = false
-    //         }
+
 type IToDoItem =
     {
         List: unit -> Async<Result<List<ToDoItem>, ServerError>>
-        Add: ToDoItem -> Async<Result<ToDoId, ServerError>>
+        Add: ToDoItem -> Async<Result<ToDoId * ToDoId, ServerError>>
         Update: ToDoItem -> Async<Result<ToDoId, ServerError>>
-        Delete: ToDoItem -> Async<Result<ToDoId, ServerError>>
+        Delete: ToDoId -> Async<Result<ToDoId, ServerError>>
         GetItem: ToDoId -> Async<Result<ToDoItem, ServerError>>
     }
