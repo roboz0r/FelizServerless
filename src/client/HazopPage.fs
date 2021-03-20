@@ -1,27 +1,29 @@
-module FelizServerless.Hazop
+[<RequireQualifiedAccess>]
+module FelizServerless.HazopPage
 
-open System
-open Feliz
 open Elmish
-open Fable.MaterialUI.Icons
-open Feliz.MaterialUI
-open Fable.Remoting.Client
 open FelizServerless.Hazop
 
 type HazopPageError = { Id: ProjectId; Message: string }
+
+type ProjectSubPage = 
+    | ProjectEditor of HazopProject.State
 
 type State =
     {
         Api: IHazopProject option
         Projects: Deferred<Result<Project, HazopPageError>, Project> list
         NewProjectDialog: NewHazopProject.State
+        SubPage: ProjectSubPage option
     }
+
 
 let init () =
     {
         Projects = []
         Api = None
         NewProjectDialog = NewHazopProject.init ()
+        SubPage = None
     }
 
 type Msg =
@@ -37,6 +39,9 @@ type Msg =
     | SetItems of Project list
     | RefreshList
     | NewProjectMsg of NewHazopProject.Msg
+    | ProjectEditorChanged of HazopProject.Msg
+    | OpenSubPage of ProjectSubPage
+    | CloseSubPages
 
 let hazopApi =
     AuthStatus.createAuthenticatedApi<IHazopProject>
@@ -148,8 +153,6 @@ let update msg state : State * Cmd<_> =
             ()
             (function
             | Ok x -> 
-                console.log (sprintf "Got Project List: %A" x)
-
                 SetItems x
             | Error err ->
                 console.log (sprintf "Error getting Project List: %A" err)
@@ -207,103 +210,39 @@ let update msg state : State * Cmd<_> =
             NewProjectDialog = newState
         },
         cmd
+    | ProjectEditorChanged (HazopProject.Msg.Save) -> 
+        let newState = 
+            match state.SubPage with
+            | Some (ProjectEditor editorState) -> 
+                let editorState = HazopProject.update HazopProject.Msg.Save editorState
+                { state with SubPage = Some (ProjectEditor editorState) }
+            | _ -> state
+        let cmd = 
+            match newState.Api, newState.SubPage with
+            | Some api, Some (ProjectEditor projectEditor) -> 
+                let project = (Editor.getCurrent projectEditor).ToProject()
+                let updateHandler result = 
+                    projectEditor
+                    |> Editor.resolve (result |> Result.mapError (fun (HazopError err) -> err))
+                    |> ProjectEditor
+                    |> OpenSubPage
 
-[<ReactComponent>]
-let private ProjectView (project: Deferred<Result<Project, HazopPageError>, Project>) dispatch =
+                Cmd.OfAsync.perform api.Update (project) updateHandler
+            | None, _ -> 
+                console.log "Received project editor message without valid api."
+                Cmd.none
+            | Some _ , _ -> 
+                console.log "Received project editor message while project editor isn't Resolved."
+                Cmd.none 
+        newState, cmd
 
-    let maxLength len (s: String) =
-        if s.Length <= len then
-            s
-        else
-            s.[0..len] + "..."
-
-    match project with
-    | HasNotStartedYet ->
-        Mui.grid [
-            grid.item true
-            grid.children [
-                Mui.paper [
-                    paper.children [
-                        Mui.typography "Loading..."
-                    ]
-                ]
-            ]
-
-        ]
-    | InProgress project ->
-        Mui.grid [
-            grid.item true
-            grid.children [
-                Mui.paper [
-                    paper.children [
-                        Mui.typography [
-                            typography.variant.h6
-                            typography.children project.Title
-                        ]
-                        Mui.typography "Loading..."
-                    ]
-                ]
-            ]
-        ]
-    | Resolved (Ok project) ->
-        Mui.grid [
-            grid.item true
-            grid.children [
-                Mui.paper [
-                    paper.children [
-                        Mui.typography [
-                            typography.variant.h6
-                            typography.children project.Title
-                        ]
-                        Mui.typography (maxLength 200 project.Description)
-                    ]
-                ]
-            ]
-        ]
-    | Resolved (Error err) ->
-        Mui.grid [
-            grid.item true
-            grid.children [
-                Mui.paper [
-                    paper.children [
-                        Mui.typography err.Message
-                        Mui.button [
-                            prop.onClick (fun _ -> dispatch RefreshList)
-                            button.children [
-                                Mui.typography "Refresh List"
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ]
-
-[<ReactComponent>]
-let View state dispatch =
-    let headingText = "Hazop Recorder"
-
-    match state.Api with
-    | Some _ ->
-        Html.div [
-            Mui.typography [
-                typography.variant.h4
-                typography.children headingText
-            ]
-            NewHazopProject.View state.NewProjectDialog (NewProjectMsg >> dispatch)
-            Mui.grid (
-                state.Projects
-                |> List.map (fun project -> ProjectView project dispatch)  // TODO Figure out why it doesn't render. Possibly query is giving empty list??
-            )
-
-        ]
-    | None ->
-        Html.div [
-            Mui.typography [
-                typography.variant.h4
-                typography.children headingText
-            ]
-            Mui.typography [
-                typography.color.error
-                typography.children "Please log in to begin"
-            ]
-        ]
+    | ProjectEditorChanged msg -> 
+        let newState = 
+            match state.SubPage with
+            | Some (ProjectEditor editorState) -> 
+                let editorState = HazopProject.update msg editorState
+                { state with SubPage = Some (ProjectEditor editorState) }
+            | _ -> state
+        newState, Cmd.none
+    | OpenSubPage subPage -> { state with SubPage = Some subPage }, Cmd.none
+    | CloseSubPages ->  { state with SubPage = None }, Cmd.none

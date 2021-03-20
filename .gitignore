@@ -203,6 +203,7 @@ out
 .vs
 .ionide
 *.fs.js
+*.fs.js.map
 
 #Webpack output dir
 dist/

@@ -1,9 +1,5 @@
+[<RequireQualifiedAccess>]
 module FelizServerless.DevEnv
-
-open Feliz
-open Feliz.UseElmish
-open Elmish
-open Feliz.MaterialUI
 
 type Software =
     {
@@ -65,30 +61,4 @@ let allSoftware =
             Description = "Image editing tool"
             Link = "https://visualstudio.microsoft.com/vs/community/"
         }
-    ]
-
-
-let private renderSoftware (x: Software) =
-    Html.div [
-        Mui.typography [
-            typography.variant.h6
-            typography.children x.Name
-        ]
-        Mui.typography [
-            typography.children [ x.Description ]
-        ]
-        Html.a [
-            prop.text "Download"
-            prop.href x.Link
-        ]
-    ]
-
-[<ReactComponent>]
-let View () =
-    Html.div [
-        Mui.typography [
-            typography.variant.h4
-            typography.children "Installed Packages"
-        ]
-        yield! allSoftware |> List.map renderSoftware
     ]

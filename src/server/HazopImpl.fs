@@ -3,12 +3,9 @@ namespace FelizServerless.Server
 open FSharp.Control.Tasks.V2.ContextInsensitive
 open Microsoft.AspNetCore.Http
 open Microsoft.Azure.Cosmos
-open FelizServerless
-open System.Net
 open System
+open FelizServerless
 open FelizServerless.Hazop
-open Thoth.Json.Net
-open System.Collections.Immutable
 open FelizServerless.Server.Cosmos
 
 module HazopProject =
@@ -82,10 +79,15 @@ module HazopProject =
             let userId = UserId claims.UniqueId
 
             let listQry (container: Container) =
-                let options = CosmosLinqSerializerOptions(PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase)
+                let options =
+                    CosmosLinqSerializerOptions(PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase)
+
                 let qry =
+                    let queryable =
+                        container.GetItemLinqQueryable<UserProject>(true, linqSerializerOptions = options)
+
                     query {
-                        for item in container.GetItemLinqQueryable<UserProject>(true, linqSerializerOptions = options) do
+                        for item in queryable do
                             where (
                                 (item.UserId) = userId.Value
                                 && item.TypeName = nameof UserProject

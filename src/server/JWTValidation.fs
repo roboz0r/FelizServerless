@@ -1,8 +1,5 @@
 namespace FelizServerless.Server
 
-open FelizServerless
-open System
-open System.Collections.Generic
 open System.Security.Cryptography
 open JWT
 open JWT.Algorithms
@@ -10,6 +7,7 @@ open JWT.Builder
 open JWT.Exceptions
 open Microsoft.AspNetCore.Http
 open Thoth.Json.Net
+open FelizServerless
 
 module FuncEngJwt =
 
@@ -60,7 +58,7 @@ module FuncEngJwt =
             |}
         |]
 
-    let tokenFromCtx (ctx:HttpContext) = 
+    let tokenFromCtx (ctx: HttpContext) =
         match ctx.Request.Headers.TryGetValue "Authorization" with
         | true, x ->
             match x.Count with
@@ -87,17 +85,16 @@ module FuncEngJwt =
         rsaKey.ImportParameters(rsa)
 
         try
-            let json = 
+            let json =
                 JwtBuilder()
                     .WithAlgorithm(RS256Algorithm(rsaKey))
                     .Audience(Audience)
                     .MustVerifySignature()
-                    .Decode(token) 
-                // .Decode<IDictionary<string, obj>>(token)
+                    .Decode(token)
                 |> JsonValue.Parse
+
             Claims2.Decoder "" json
             |> Result.mapError (fun (field, reason) -> OtherJwtError $"Failed to decode {field}\n%A{reason}")
-            // |> Result.map (fun x -> { x with All = json })
 
         with
         | :? InvalidTokenPartsException -> Error InvalidTokenParts

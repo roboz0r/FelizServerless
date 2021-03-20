@@ -1,31 +1,25 @@
 namespace FelizServerless.Server
 
+open FSharp.Control.Tasks
 open System
 open System.IO
-open Microsoft.AspNetCore.Mvc
+open Microsoft.AspNetCore.Http
 open Microsoft.Azure.WebJobs
 open Microsoft.Azure.WebJobs.Extensions.Http
-open Microsoft.AspNetCore.Http
-open Newtonsoft.Json
+open Microsoft.Extensions.FileProviders
 open Microsoft.Extensions.Logging
-open Saturn.Application
-open FuncEngJwt
-open Saturn.AzureFunctions
-open Saturn.Controller
-open Saturn
-open FelizServerless
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open HeyRed.Mime
-open Microsoft.Extensions.FileProviders
-open FSharp.Control.Tasks
 open Giraffe
+open Saturn
+open Saturn.AzureFunctions
+open Thoth.Json.Giraffe
+open Thoth.Json.Net
+open FelizServerless
+open FuncEngJwt
 
 module Saturn =
-
-    // Just there for quick testing where a public mutable logger is easy to call anywhere.
-    // let mutable cheatLogger = Unchecked.defaultof<ILogger>
-
     let staticController =
         controller {
             index
@@ -125,7 +119,7 @@ module Saturn =
         }
 
     let thothSerialiser =
-        Thoth.Json.Giraffe.ThothSerializer(Thoth.Json.Net.CaseStrategy.CamelCase, Json.extraCoders, false)
+        ThothSerializer(CamelCase, Json.extraCoders, false)
 
     [<FunctionName("SaturnRouter")>]
     let saturnRouter
@@ -146,9 +140,6 @@ module Saturn =
         | _ ->
 
             // TODO Fork Saturn and add execution_context CE custom operation
-
-            // Just there for quick testing where a public mutable logger is easy to call anywhere.
-            // cheatLogger <- req.HttpContext.Logger
 
             // Makes files available to the App via the HttpContext
             // Refer to GetWebHostEnvironment extension method

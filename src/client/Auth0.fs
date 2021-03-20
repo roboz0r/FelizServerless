@@ -1,7 +1,6 @@
 [<RequireQualifiedAccess>]
 module FelizServerless.Auth0
 
-open Fable.Core.JsInterop
 open Fable.Core
 open System
 
@@ -25,53 +24,53 @@ type IUserMetaData =
 
 type IIdentity =
     [<EmitProperty("connection")>]
-    abstract Connection: string
+    abstract Connection : string
 
     [<EmitProperty("provider")>]
-    abstract Provider: string
+    abstract Provider : string
 
     [<EmitProperty("user_id")>]
-    abstract UserId: string
+    abstract UserId : string
 
     [<EmitProperty("isSocial")>]
-    abstract IsSocial: bool
+    abstract IsSocial : bool
 
 type IUserDetails =
     [<EmitProperty("created_at")>]
-    abstract CreatedAt: DateTime
+    abstract CreatedAt : DateTime
 
     [<EmitProperty("email")>]
-    abstract Email: string
+    abstract Email : string
 
     [<EmitProperty("email_verified")>]
-    abstract EmailVerified: bool
+    abstract EmailVerified : bool
 
     [<EmitProperty("identities")>]
-    abstract Identities: IIdentity array
+    abstract Identities : IIdentity array
 
     [<EmitProperty("name")>]
-    abstract Name: string
+    abstract Name : string
 
     [<EmitProperty("nickname")>]
-    abstract Nickname: string
+    abstract Nickname : string
 
     [<EmitProperty("picture")>]
-    abstract Picture: string
+    abstract Picture : string
 
     [<EmitProperty("updated_at")>]
-    abstract UpdatedAt: DateTime
+    abstract UpdatedAt : DateTime
 
     [<EmitProperty("user_id")>]
-    abstract UserId: string
+    abstract UserId : string
 
     [<EmitProperty("user_metadata")>]
-    abstract UserMetadata: IUserMetaData
+    abstract UserMetadata : IUserMetaData
 
     [<EmitProperty("last_ip")>]
-    abstract LastIp: string
+    abstract LastIp : string
 
     [<EmitProperty("last_login")>]
-    abstract LastLogin: DateTime
+    abstract LastLogin : DateTime
 
     [<EmitProperty("logins_count")>]
-    abstract LoginsCount: int
+    abstract LoginsCount : int

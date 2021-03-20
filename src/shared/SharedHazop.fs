@@ -50,7 +50,7 @@ type GuidewordId =
 
 type Image =
     {
-        Data: array<byte> 
+        Data: array<byte>
         Filename: string
         MIMEType: string
     }
@@ -62,7 +62,17 @@ type Address =
         City: string
         State: string
         Postcode: string
+        Country: string
     }
+    static member Empty =
+        {
+            Line1 = ""
+            Line2 = ""
+            City = ""
+            State = ""
+            Postcode = ""
+            Country = ""
+        }
 
 type Document =
     {

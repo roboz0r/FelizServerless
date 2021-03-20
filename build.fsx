@@ -43,7 +43,6 @@ let npm args workingDir =
 
     run path args workingDir
 
-
 let func args workingDir =
     let path =
         match ProcessUtils.tryFindFileOnPath "func" with
@@ -72,16 +71,6 @@ let start args =
     let result = Shell.Exec ("pwsh", "--Command start " + args, rootPath) 
     if result <> 0 then failwithf "'start %s' failed." args
 
-// Target.create "Clean" (fun _ -> 
-//     !! "src/**/bin" 
-//     ++ "src/**/obj" 
-//     |> Shell.cleanDirs)
-
-// Target.create "Build" (fun _ ->
-//     !! "src/**/*.*proj" 
-//     -- "src/**/.fable/**"
-//     |> Seq.iter (DotNet.build id))
-
 Target.create "CleanDist" (fun _ -> 
     !! "dist/" 
     |> Shell.cleanDirs)
@@ -95,11 +84,11 @@ Target.create "CopyPublic" (fun _ ->
 )
 
 Target.create "FableDev" (fun _ -> 
-    dotnet (sprintf "fable %s --run webpack --mode=%s" clientRel dev) rootPath
+    dotnet (sprintf "fable %s -s --run webpack --mode=%s" clientRel dev) rootPath
 )
 
 Target.create "FableProd" (fun _ -> 
-    dotnet (sprintf "fable %s --run webpack --mode=%s" clientRel prod) rootPath
+    dotnet (sprintf "fable %s -s --run webpack --mode=%s" clientRel prod) rootPath
 )
 
 Target.create "FuncStart" (fun _ -> 
@@ -112,15 +101,15 @@ Target.create "FuncStart" (fun _ ->
 
 Target.create "Watch" (fun _ -> 
     [ 
-        async { dotnet (sprintf "fable watch %s --run webpack serve --mode=%s" clientRel dev) rootPath }
+        async { dotnet (sprintf "fable watch %s -s --run webpack serve --mode=%s" clientRel dev) rootPath }
         // async {func "start" serverPath} 
         // https://stackoverflow.com/a/63753889/14134059
         // This allows dotnet watch to be used with Azure functions
         async { dotnet "watch msbuild /t:RunFunctions" serverPath }
-        async {   
-            do! Async.Sleep 10000 
-            start "http://localhost:8080" 
-        }
+        // async {   
+        //     do! Async.Sleep 10000 
+        //     start "http://localhost:8080" 
+        // }
     ]
     |> Async.Parallel
     |> Async.RunSynchronously
@@ -129,10 +118,6 @@ Target.create "Watch" (fun _ ->
 
 Target.create "WatchFunc" (fun _ -> 
     [ 
-        // async { dotnet (sprintf "fable %s --run webpack --mode=%s" clientRel dev) rootPath }
-        // async {func "start" serverPath} 
-        // https://stackoverflow.com/a/63753889/14134059
-        // This allows dotnet watch to be used with Azure functions
         async { dotnet "watch msbuild /t:RunFunctions" serverPath }
         async {   
             do! Async.Sleep 10000 
@@ -152,9 +137,6 @@ Target.create "Publish" (fun _ ->
         az "login"
         func "azure functionapp publish FuncEng" serverPath
 )
-
-// "Clean" 
-//     ==> "Build" 
 
 "CleanDist"
     ==> "CleanDevServer"

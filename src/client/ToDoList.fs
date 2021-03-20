@@ -1,11 +1,8 @@
+[<RequireQualifiedAccess>]
 module FelizServerless.ToDoList
 
 open System
-open Feliz
 open Elmish
-open Fable.MaterialUI.Icons
-open Feliz.MaterialUI
-open Fable.Remoting.Client
 
 type ToDoError = { Id: ToDoId; Message: string }
 
@@ -175,105 +172,3 @@ let update msg state : State * Cmd<_> =
                     Fable.Core.JS.console.log (sprintf "Error getting ToDoItem List: %A" err)
                     SetItems [])
         | None -> Cmd.none
-
-let private toDoView (item: Deferred<Result<ToDoItem, ToDoError>, ToDoItem>) dispatch =
-
-    match item with
-    | HasNotStartedYet ->
-        Mui.card [
-            card.children [
-                Mui.typography "Not Started..."
-            ]
-        ]
-    | InProgress item ->
-        Mui.card [
-            card.children [
-                Mui.typography item.Description
-                Mui.button [
-                    button.disabled true
-                    button.children [ syncIcon [] ]
-                ]
-            ]
-        ]
-    | Resolved (Ok item) ->
-        Mui.card [
-            card.children [
-                Mui.typography item.Description
-                if not item.Completed then
-                    Mui.button [
-                        prop.onClick
-                            (fun _ ->
-                                { item with Completed = true }
-                                |> Update
-                                |> dispatch)
-                        button.children [ doneIcon [] ]
-                    ]
-                Mui.button [
-                    prop.onClick (fun _ -> item.Id |> Remove |> dispatch)
-                    button.children [ deleteIcon [] ]
-                ]
-            ]
-        ]
-    | Resolved (Error err) ->
-        Mui.card [
-            card.children [
-                Mui.typography err.Message
-                Mui.button [
-                    prop.onClick (fun _ -> RefreshList |> dispatch)
-                    button.children [ deleteIcon [] ]
-                ]
-            ]
-        ]
-
-[<ReactComponent>]
-let View state dispatch =
-
-    match state.ToDoApi with
-    | Some _ ->
-
-        Html.div [
-            Mui.typography [
-                typography.variant.h4
-                typography.children "To Do List"
-            ]
-            Mui.list (
-                state.Items
-                |> List.map (fun i -> Mui.listItem [ (toDoView i dispatch) ])
-            )
-
-            Mui.textField [
-                prop.key (state.NewItemId.ToString()) //Changing key after submit causes the element to rerender (and hence reset to default value)
-                textField.label "Add item"
-                textField.variant.filled
-                textField.defaultValue state.NewItemText
-                textField.onChange (NewItemChanged >> dispatch)
-            ]
-            Mui.button [
-                prop.onClick
-                    (fun _ ->
-                        if String.IsNullOrWhiteSpace state.NewItemText then
-                            ()
-                        else
-                            {
-                                Id = state.NewItemId
-                                Description = state.NewItemText
-                                Completed = false
-                                UserId = state.UserId.Value
-                            }
-                            |> Add
-                            |> dispatch)
-                button.disabled (String.IsNullOrWhiteSpace state.NewItemText)
-                button.children (addIcon [])
-            ]
-        ]
-    | None ->
-        Html.div [
-            Mui.typography [
-                typography.variant.h4
-                typography.children "To Do List"
-            ]
-            Mui.typography [
-                typography.color.error
-                typography.children "Please log in to create a To Do list"
-            ]
-        ]

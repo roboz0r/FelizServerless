@@ -30,7 +30,7 @@ type IClaims =
 
 type UserId =
     | UserId of string
-    member this.Value = 
+    member this.Value =
         let (UserId id) = this
         id
 

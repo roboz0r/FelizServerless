@@ -78,16 +78,21 @@ module ToDo =
             let userId = UserId claims.UniqueId
 
             let listQry (container: Container) =
-                let options = CosmosLinqSerializerOptions(PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase)
+                let options =
+                    CosmosLinqSerializerOptions(PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase)
+
                 let qry =
+                    let queryable =
+                        container.GetItemLinqQueryable<CosmosToDoItem>(true, linqSerializerOptions = options)
+
                     query {
-                        for item in container.GetItemLinqQueryable<CosmosToDoItem>(true, linqSerializerOptions = options) do
+                        for item in queryable do
                             where (item.UserId = userId.Value)
                             select item
                     }
 
-                qry 
-                |> Seq.toList 
+                qry
+                |> Seq.toList
                 |> List.map CosmosToDoItem.To
                 |> Ok
 
@@ -104,7 +109,7 @@ module ToDo =
 
                 Add =
                     fun item ->
-                        fun (item:CosmosToDoItem) ->
+                        fun (item: CosmosToDoItem) ->
                             task {
                                 let newId = Guid.NewGuid()
                                 let newItem = { item with Id = newId }
@@ -143,7 +148,7 @@ module ToDo =
                             task {
                                 let! container = container ()
                                 let! itemResp = container.ReadItemAsync(id.ToString(), PartitionKey(userId.Value))
-                                return Ok (CosmosToDoItem.To itemResp.Resource)
+                                return Ok(CosmosToDoItem.To itemResp.Resource)
                             }
                             |> Async.AwaitTask
                         |> tryProcess id

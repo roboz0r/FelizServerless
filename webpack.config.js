@@ -34,18 +34,18 @@ module.exports = (env, argv) => {
             '/api/**': {
                 target: "http://localhost:7071",
                 changeOrigin: true,
-                
+
                 headers: {
-                    Host:"localhost:7071"
+                    Host: "localhost:7071"
                 }
             },
             '/img/**': {
                 target: "http://localhost:7071",
-                pathRewrite: {'^/img': '/api/img'},
+                pathRewrite: { '^/img': '/api/img' },
                 changeOrigin: true,
-                
+
                 headers: {
-                    Host:"localhost:7071"
+                    Host: "localhost:7071"
                 }
             }
         },
@@ -119,7 +119,8 @@ module.exports = (env, argv) => {
                 })
             ])
             : commonPlugins.concat([
-                new ReactRefreshWebpackPlugin()
+                // https://github.com/pmmmwh/react-refresh-webpack-plugin/issues/150#issuecomment-661329471
+                new ReactRefreshWebpackPlugin({ include: /\.(f|j)s$/ })
             ]),
         resolve: {
             // See https://github.com/fable-compiler/Fable/issues/1490
@@ -141,11 +142,17 @@ module.exports = (env, argv) => {
             hot: true,
             inline: true
         },
+        // - source-map-loader: Allows Fable generated Source Maps to be hit https://github.com/MangelMaxime/fulma-demo/pull/43#issuecomment-756556346
         // - babel-loader: transforms JS to old syntax (compatible with old browsers)
         // - sass-loaders: transforms SASS/SCSS into JS
         // - file-loader: Moves files referenced in the code (fonts, images) into output folder
         module: {
             rules: [
+                {
+                    test: /\.js$/,
+                    enforce: "pre",
+                    use: ["source-map-loader"],
+                },
                 {
                     test: /\.(js|jsx)$/,
                     exclude: /node_modules/,
