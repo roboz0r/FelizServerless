@@ -23,6 +23,10 @@
     <Compile Include="AuthStatusView.fs" />
     <Compile Include="ToDoList.fs" />
     <Compile Include="ToDoListView.fs" />
+    <Compile Include="GuidewordEditor.fs" />
+    <Compile Include="GuidewordEditorView.fs" />
+    <Compile Include="GuidewordSetEditor.fs" />
+    <Compile Include="GuidewordSetEditorView.fs" />
     <Compile Include="NewHazopProject.fs" />
     <Compile Include="NewHazopProjectView.fs" />
     <Compile Include="AddressEditor.fs" />

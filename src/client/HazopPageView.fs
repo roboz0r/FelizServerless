@@ -48,7 +48,8 @@ let ProjectView (project: Deferred<Result<Project, HazopPage.HazopPageError>, Pr
                         ]
                         Mui.button [
                             button.color.primary
-                            button.children (editIcon [])
+                            button.children "Edit Project"
+                            button.endIcon (editIcon [])
                             prop.onClick
                                 (fun _ ->
                                     project

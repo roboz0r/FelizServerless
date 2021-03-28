@@ -6,14 +6,14 @@ open Feliz.MaterialUI
 
 [<ReactComponent>]
 let View (state: UserPage.State) dispatch =
-    match state.AuthStatus.UserDetails, state.Claims with
-    | Some userDetails, None ->
-        Html.div [
+    match state.AuthStatus, state.Claims with
+    | AuthStatus.AuthWDetails (user, _, userDetails), None ->
+        Mui.container [
             Mui.typography ($"Name: {userDetails.Name}")
             Mui.typography ($"Email: {userDetails.Email}")
             Mui.typography ($"No Token")
         ]
-    | Some userDetails, Some (Ok claims) ->
+    | AuthStatus.AuthWDetails (user, _, userDetails), Some (Ok claims) ->
 
         let claims' =
             [
@@ -26,13 +26,13 @@ let View (state: UserPage.State) dispatch =
                 $"Audience ; {claims.Audience}"
             ]
 
-        Html.div [
+        Mui.container [
             Mui.typography ($"Name: {userDetails.Name}")
             Mui.typography ($"Email: {userDetails.Email}")
             yield! claims' |> List.map Mui.typography
         ]
 
-    | Some userDetails, Some (Error err) ->
+    | AuthStatus.AuthWDetails (user, _, userDetails), Some (Error err) ->
 
         let errMsg =
             match err with
@@ -41,13 +41,14 @@ let View (state: UserPage.State) dispatch =
             | TokenExpired (_) -> "Token Expired"
             | OtherJwtError s -> s
 
-        Html.div [
+        Mui.container [
             Mui.typography ($"Name: {userDetails.Name}")
             Mui.typography ($"Email: {userDetails.Email}")
             Mui.typography errMsg
         ]
 
-    | None, _ ->
-        Html.div [
+    | _, _ ->
+        Mui.container [
             Mui.typography ("Please log in using the button at the top right.")
+            Mui.typography ($"State:\n{JSON.stringify state}")
         ]

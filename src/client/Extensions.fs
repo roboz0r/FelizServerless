@@ -44,3 +44,7 @@ module String =
         function
         | Some s -> s
         | None -> ""
+
+module JSON = 
+    let stringify o = 
+        Fable.Core.JS.JSON.stringify(o, Unchecked.defaultof<_>, 4)

@@ -4,8 +4,15 @@ module FelizServerless.AuthStatus
 open System
 open Fetch
 open Fable.Auth0
-open Fable.Auth0.AuthState
 open Fable.Remoting.Client
+
+type AuthStatusState = 
+    | HasError of Error
+    | AuthenticatedNoToken of Global.IUser
+    | Authenticated of Global.IUser * JWToken
+    | AuthWDetails of  Global.IUser * JWToken * Auth0.IUserDetails
+    | Loading
+    | Anonymous
 
 type State =
     {
@@ -15,6 +22,15 @@ type State =
         Scopes: string list
         Token: JWToken option
     }
+    member this.AuthStatus = 
+        match this.AuthState, this.Token, this.UserDetails with
+        | Fable.Auth0.Authenticated user, None, None -> AuthenticatedNoToken user
+        | Fable.Auth0.Authenticated user, Some token, None -> Authenticated (user, token)
+        | Fable.Auth0.Authenticated user, Some token, Some details -> AuthWDetails (user, token, details)
+        | Fable.Auth0.Authenticated _, None, Some _ -> failwith "Should never happen"
+        | Fable.Auth0.HasError e, _, _ -> HasError e
+        | Fable.Auth0.Loading, _, _ -> Loading
+        | Fable.Auth0.Anonymous, _, _ -> Anonymous
 
 type Msg =
     | SetUserDetails of Auth0.IUserDetails
@@ -31,7 +47,7 @@ let inline createAuthenticatedApi<'T> (JWToken token) =
 
 let init scopes =
     {
-        AuthState = Anonymous
+        AuthState = Fable.Auth0.Anonymous
         UserDetails = None
         AnchorEl = None
         Scopes = scopes
@@ -43,7 +59,7 @@ let update msg state =
     | SetUserDetails x -> { state with UserDetails = Some x }
     | SetAuthState x ->
         match x with
-        | Authenticated _ -> { state with AuthState = x }
+        | Fable.Auth0.Authenticated _ -> { state with AuthState = x }
         | _ ->
             { state with
                 AuthState = x
@@ -52,19 +68,6 @@ let update msg state =
             }
     | SetAnchorEl x -> { state with AnchorEl = x }
     | SetToken x -> { state with Token = Some x }
-
-
-let stringOrEmpty =
-    function
-    | Some s -> s
-    | None -> ""
-
-let allScopes x =
-    match x with
-    | [] -> None
-    | x -> Some(String.Join(" ", x))
-
-type AuthStatusState = { mutable ShowMenu: bool }
 
 type Auth0Headers(accessToken) =
     member __.Authorization = $"Bearer {accessToken}"

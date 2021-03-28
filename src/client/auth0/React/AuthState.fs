@@ -1,4 +1,4 @@
-module Fable.Auth0.AuthState
+namespace Fable.Auth0
 // fsharplint:disable
 open System
 open Fable.Core
@@ -22,11 +22,11 @@ type AuthState =
     | Loading
     | Anonymous
 
-let OfJsObj (authState: IAuthState) =
-    let x = authState
+    static member OfJsObj (authState: IAuthState) =
+        let x = authState
 
-    match x.isLoading, x.error, x.isAuthenticated, x.user with
-    | true, _, _, _ -> Loading
-    | _, Some e, _, _ -> HasError e
-    | _, _, true, Some u -> Authenticated u
-    | _ -> Anonymous
+        match x.isLoading, x.error, x.isAuthenticated, x.user with
+        | true, _, _, _ -> Loading
+        | _, Some e, _, _ -> HasError e
+        | _, _, true, Some u -> Authenticated u
+        | _ -> Anonymous

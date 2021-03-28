@@ -3,6 +3,9 @@ module FelizServerless.HazopProject
 
 open FelizServerless.Hazop
 
+type SubPage = 
+    | GuidewordSetEditor of GuidewordSetEditor.State
+
 type ProjectViewState =
     {
         Id: ProjectId
@@ -11,7 +14,8 @@ type ProjectViewState =
         Company: HazopCompany.State
         Documents: Document list
         Systems: System list
-        GuidewordSets: GuidewordSet list
+        GuidewordSets: GuidewordSetEditor.State list
+        SubPage: SubPage option
     }
     member this.ToProject() : Project =
         {
@@ -21,7 +25,7 @@ type ProjectViewState =
             Company = this.Company.ToCompany()
             Documents = this.Documents
             Systems = this.Systems
-            GuidewordSets = this.GuidewordSets
+            GuidewordSets = this.GuidewordSets |> List.map (fun x -> x.ToGuidewordSet())
         }
 
     static member OfProject(project: Project) : ProjectViewState =
@@ -32,7 +36,8 @@ type ProjectViewState =
             Company = HazopCompany.State.OfCompany project.Company
             Documents = project.Documents
             Systems = project.Systems
-            GuidewordSets = project.GuidewordSets
+            GuidewordSets = project.GuidewordSets |> List.map GuidewordSetEditor.init
+            SubPage = None
         }
 
 type State = Editor<ProjectViewState, string>
@@ -43,16 +48,22 @@ let init project : State =
     |> ProjectViewState.OfProject
     |> Editor.create
 
+[<RequireQualifiedAccess>]
+type SubPageMsg = 
+    | GuidewordSetEditor
+
 type Msg =
     | TitleChanged of string
     | DescriptionChanged of string
     | CompanyChanged of HazopCompany.State
     | DocumentsChanged of Document list
     | SystemsChanged of System list
-    | GuidewordSetsChanged of GuidewordSet list
+    | GuidewordSetsChanged of GuidewordSetEditor.State list
     | Save //Intended as external message at the next level to bubble a request to save
     | CompanyView of HazopCompany.Msg
     | Revert
+    | OpenSubPage of SubPageMsg
+    | CloseSubPage
 
 let update msg state : State =
     match msg with
@@ -84,3 +95,9 @@ let update msg state : State =
 
     | Save _ -> state |> Editor.makePending
     | Revert -> state |> Editor.clean
+    | OpenSubPage subPage -> state
+        // match subPage with
+        // | SubPageMsg.GuidewordSetEditor -> 
+        //     let gwSubPage = GuidewordSetEditor.init
+        //     state |> Editor.map (fun state -> { state with SubPage = Some gwSubPage })
+    | CloseSubPage -> state |> Editor.map (fun state -> { state with SubPage = None })

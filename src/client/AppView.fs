@@ -2,7 +2,6 @@ module FelizServerless.AppView
 
 open Feliz
 open Feliz.Router
-// open Elmish
 open Feliz.UseElmish
 open Feliz.MaterialUI
 
@@ -25,20 +24,6 @@ let private useStyles : unit -> App.Styles =
                 Title = styles.create [ style.flexGrow 1 ]
             })
 
-// let drawerWidth = 240
-//    + theme.transitions.create (
-//        [| "margin"; "width" |],
-//        { new TransitionOptions with
-//            member __.delay = 0
-//            member __.duration = theme.transitions.duration.leavingScreen
-//            member __.easing = theme.transitions.easing.sharp }
-//    )
-//    appBarShift =
-//        styles.create [
-//            style.width (length.perc (100 - drawerWidth))
-//            style.marginLeft drawerWidth
-//        ]
-
 // https://stackoverflow.com/questions/56432167/how-to-style-components-using-makestyles-and-still-have-lifecycle-methods-in-mat
 // https://cmeeren.github.io/Feliz.MaterialUI/#usage/themes
 
@@ -58,6 +43,10 @@ let private myTheme =
             ]
             theme.overrides.muiPaper.rounded [
                 style.padding 10
+            ]
+            theme.props.muiButton [
+                button.variant.contained
+                button.color.primary
             ]
         ]
     )

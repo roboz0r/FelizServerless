@@ -1,10 +1,10 @@
 [<RequireQualifiedAccess>]
 module FelizServerless.AuthStatusView
 
+open System
 open Feliz
 open Feliz.MaterialUI
 open Fable.Auth0
-open Fable.Auth0.AuthState
 open Fable.Core.JsInterop
 open Browser.Dom
 open Fetch
@@ -21,49 +21,60 @@ let LogIn (state: AuthStatus.State) dispatch =
     let auth0 = useAuth0 ()
     let authState = AuthState.OfJsObj(auth0 :> IAuthState)
 
-    if state.AuthState <> authState then
-        dispatch (Msg.SetAuthState authState)
+    let allScopes x =
+        match x with
+        | [] -> None
+        | x -> Some(String.Join(" ", x))
 
     //  https://auth0.com/docs/quickstart/spa/react/02-calling-an-api
     React.useEffect (
         (fun _ ->
             // Get User Details
-            match state.AuthState with
-            | Authenticated user ->
-                promise {
-                    let domain = Auth0.Domain
+            if state.AuthState = authState then
+                match state.AuthState with
+                | Authenticated user ->
+                    promise {
+                        let domain = Auth0.Domain
 
-                    try
-                        let! accessToken =
-                            auth0.getAccessTokenSilently (
-                                jsOptions<Global.IGetTokenSilentlyOptions>
-                                    (fun x ->
-                                        x.audience <- Some $"https://{domain}/api/v2/"
-                                        x.redirect_uri <- Some window.location.href
-                                        x.scope <- AuthStatus.allScopes state.Scopes)
-                            )
+                        try
+                            let! tokenStr =
+                                auth0.getAccessTokenSilently (
+                                    jsOptions<Global.IGetTokenSilentlyOptions>
+                                        (fun x ->
+                                            x.audience <- Some $"https://{domain}/api/v2/"
+                                            x.redirect_uri <- Some window.location.href
+                                            x.scope <- allScopes state.Scopes)
+                                )
 
-                        dispatch (Msg.SetToken(JWToken accessToken))
+                            let accessToken = JWToken tokenStr
 
+                            match state.Token with
+                            | None -> dispatch (Msg.SetToken(accessToken))
+                            | Some token when token <> accessToken -> dispatch (Msg.SetToken(accessToken))
+                            | Some _ ->
 
-                        let userDetailsByIdUrl =
-                            $"https://{domain}/api/v2/users/{user.sub}"
+                                let userDetailsByIdUrl =
+                                    $"https://{domain}/api/v2/users/{user.sub}"
 
-                        let header : IHttpRequestHeaders =
-                            !!{|
-                                  Authorization = $"Bearer {accessToken}"
-                              |}
+                                let header : IHttpRequestHeaders =
+                                    !!{|
+                                          Authorization = $"Bearer {tokenStr}"
+                                      |}
 
-                        let! userDetailsResponse = fetch userDetailsByIdUrl [ Headers(header) ]
-                        let! (userDetails: Auth0.IUserDetails) = !!(userDetailsResponse.json ())
-
-                        dispatch (Msg.SetUserDetails(userDetails))
-                    with ex -> console.log (sprintf "Error getting user details: %s" ex.Message)
-                }
-                |> Promise.start
-            | _ -> ()),
-        [| state.AuthState :> obj |]
+                                let! userDetailsResponse = fetch userDetailsByIdUrl [ Headers(header) ]
+                                let! (userDetails: Auth0.IUserDetails) = !!(userDetailsResponse.json ())
+                                dispatch (Msg.SetUserDetails(userDetails))
+                        with ex -> console.log (sprintf "Error getting user details: %s" ex.Message)
+                    }
+                    |> Promise.start
+                | _ -> ()
+            else
+                ()),
+        [| state.AuthState :> obj; state.Token :> _ |]
     )
+
+    if state.AuthState <> authState then
+        dispatch (Msg.SetAuthState authState)
 
     let redirectLoginOptions =
         jsOptions<Auth0Context.IRedirectLoginOptions> (fun x -> x.redirectUri <- Some window.location.href)
@@ -77,7 +88,6 @@ let LogIn (state: AuthStatus.State) dispatch =
             Mui.button [
                 prop.ariaControls "simple-menu"
                 prop.text "Loading..."
-                button.color.inherit'
                 button.disabled true
             ]
         ]
@@ -85,7 +95,6 @@ let LogIn (state: AuthStatus.State) dispatch =
         Html.div [
             Mui.button [
                 prop.onClick (fun e -> dispatch (Msg.SetAuthState Anonymous))
-                button.color.inherit'
                 button.children [
                     Mui.tooltip [
                         tooltip.title e.Error
@@ -105,7 +114,6 @@ let LogIn (state: AuthStatus.State) dispatch =
             Mui.button [
                 prop.text (String.OfOption user.name)
                 prop.onClick (fun e -> dispatch (Msg.SetAnchorEl(Some(e.currentTarget :?> Browser.Types.Element))))
-                button.color.inherit'
             ]
 
             Mui.menu [

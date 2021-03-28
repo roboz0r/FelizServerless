@@ -4,7 +4,6 @@ open System
 open Fable.Core
 open Fable.Core.JS
 open Fable.Auth0.Global
-open Fable.Auth0.AuthState
 
 [<Import("Auth0Context", "@auth0/auth0-react")>]
 let Auth0Context: obj = jsNative
