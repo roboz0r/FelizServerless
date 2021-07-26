@@ -8,7 +8,7 @@ type Msg =
     | Decrement
     | SetValue of int
 
-type State = { Count: Deferred<int, unit> }
+type State = { Count: Deferred<int> }
 
 let counterApi =
     Remoting.createApi ()
@@ -16,7 +16,9 @@ let counterApi =
     |> Remoting.buildProxy<ICounter>
 
 let init () =
-    { Count = HasNotStartedYet }, (Cmd.OfAsync.perform counterApi.Init () SetValue)
+    { Count = HasNotStartedYet }, Cmd.none // (Cmd.OfAsync.perform counterApi.Init () SetValue)
+
+    //TODO Only perform command if has focus
 
 let update msg state =
     match msg with

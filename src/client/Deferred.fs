@@ -1,8 +1,9 @@
 namespace FelizServerless
 
-type Deferred<'T, 'U> =
+type Deferred<'T> =
     | HasNotStartedYet
-    | InProgress of 'U
+    | FirstLoad
+    | InProgress of 'T
     | Resolved of 'T
 
 
@@ -13,6 +14,7 @@ module Deferred =
     let resolved =
         function
         | HasNotStartedYet -> false
+        | FirstLoad -> false
         | InProgress _ -> false
         | Resolved _ -> true
 
@@ -20,26 +22,30 @@ module Deferred =
     let inProgress =
         function
         | HasNotStartedYet -> false
+        | FirstLoad -> true
         | InProgress _ -> true
         | Resolved _ -> false
 
     /// Transforms the underlying value of the input deferred value when it exists from type to another
-    let map (transform: 'T -> 'U) (deferred: Deferred<'T, 'V>) : Deferred<'U, 'V> =
+    let map (transform: 'T -> 'U) (deferred: Deferred<'T>) : Deferred<'U> =
         match deferred with
         | HasNotStartedYet -> HasNotStartedYet
-        | InProgress x -> InProgress x
+        | FirstLoad -> FirstLoad
+        | InProgress value -> InProgress (transform value)
         | Resolved value -> Resolved(transform value)
 
     /// Verifies that a `Deferred<'T>` value is resolved and the resolved data satisfies a given requirement.
     let exists (predicate: 'T -> bool) =
         function
         | HasNotStartedYet -> false
+        | FirstLoad -> false
         | InProgress _ -> false
         | Resolved value -> predicate value
 
     /// Like `map` but instead of transforming just the value into another type in the `Resolved` case, it will transform the value into potentially a different case of the the `Deferred<'T>` type.
-    let bind (transform: 'T -> Deferred<'U, 'V>) (deferred: Deferred<'T, 'V>) : Deferred<'U, 'V> =
-        match deferred with
-        | HasNotStartedYet -> HasNotStartedYet
-        | InProgress x -> InProgress x
-        | Resolved value -> transform value
+    // let bind (transform: 'T -> Deferred<'U>) (deferred: Deferred<'T>) : Deferred<'U> =
+    //     match deferred with
+    //     | HasNotStartedYet -> HasNotStartedYet
+    //     | FirstLoad -> FirstLoad
+    //     | InProgress x -> InProgress x
+    //     | Resolved value -> transform value

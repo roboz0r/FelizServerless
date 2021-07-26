@@ -40,11 +40,19 @@ module Stylesheet =
     let inline load (path: string) = importDefault<IStylesheet> path
 
 module String =
+    /// Returns an empty string "" if the option is None otherwise returns the string
     let OfOption =
         function
         | Some s -> s
         | None -> ""
 
-module JSON = 
-    let stringify o = 
-        Fable.Core.JS.JSON.stringify(o, Unchecked.defaultof<_>, 4)
+    /// Shortens a string to the `length` specified. Adds trailing "..." if the string was shortened.
+    let truncate length (s: String) =
+        if s.Length <= length then
+            s
+        else
+            s.[0..length] + "..."
+
+module JSON =
+    let stringify o =
+        Fable.Core.JS.JSON.stringify (o, Unchecked.defaultof<_>, 4)

@@ -1,8 +1,9 @@
 [<RequireQualifiedAccess>]
 module FelizServerless.Auth0
 
-open Fable.Core
 open System
+open Fable.Core
+open Fable.Auth0
 
 [<Literal>]
 let Name = "FuncEng"
@@ -74,3 +75,28 @@ type IUserDetails =
 
     [<EmitProperty("logins_count")>]
     abstract LoginsCount : int
+
+// TODO Make a proper record from user information containing only fields we care about.
+
+type UserInformation =
+    {
+        User: Global.IUser
+        Details: IUserDetails option
+    }
+    member this.UniqueId = 
+        let sub = this.User.sub |> Option.defaultWith (fun x -> failwith "User project does not contain a subject (Id)")
+        $"https://{Domain}/%s{sub}"
+
+type AuthStatusState =
+    | HasError of Error
+    | PreAuthenticated of Global.IUser
+    | Authenticated of UserInformation * JWToken
+    | Loading
+    | Anonymous
+
+module AuthStatusState = 
+
+    let tryToken =
+        function
+        | Authenticated (_, token) -> Some token
+        | _ -> None

@@ -22,7 +22,7 @@ type State =
 
         }
 
-    static member OfGuidewWordSet(gwSet: GuidewordSet) : State =
+    static member OfGuidewordSet(gwSet: GuidewordSet) : State =
 
         let gwIx =
             gwSet.Guidewords
@@ -59,7 +59,7 @@ let private indexDeviations (guidewords: GuidewordEditor.State list) =
     |> Set
     |> Set.remove ""
 
-let init gwSet = State.OfGuidewWordSet gwSet
+let init gwSet = State.OfGuidewordSet gwSet
 
 type Msg =
     | NameChanged of string

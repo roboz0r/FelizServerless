@@ -8,6 +8,7 @@ open Elmish
 let console = Fable.Core.JS.console
 
 type private AuthState = Fable.Auth0.AuthState
+module HazopPage = HazopPage2
 
 type Styles =
     {
@@ -26,6 +27,7 @@ type State =
         AuthState: AuthStatus.State
         UserPage: UserPage.State
         HazopPage: HazopPage.State
+        HazopProjectPage : HazopProjectPage.State option
     }
 
 type Msg =
@@ -57,8 +59,11 @@ let init () =
         AuthState = authState
         UserPage = userPage
         HazopPage = HazopPage.init ()
+        HazopProjectPage = None
     },
     Cmd.batch [ counterCmd; userCmd ]
+
+let mapCmd (f:'TMsg -> 'UMsg) (state:'State, msg) = state, (Cmd.map f msg)
 
 let update msg state =
     match msg with
@@ -76,36 +81,31 @@ let update msg state =
         { state with ToDoList = todo }, Cmd.map ToDo cmd
     | AuthStatus msg ->
         let newAuthState = AuthStatus.update msg state.AuthState
-        console.log (sprintf "%A" msg)
-        match state.AuthState.AuthStatus, newAuthState.AuthStatus with
-        | AuthStatus.AuthenticatedNoToken _, AuthStatus.Authenticated (user, token) ->
-            let userPage, userCmd2 =
-                let msg =
-                    UserPage.SetAuthStatus(newAuthState.AuthStatus)
+        console.log (sprintf "Auth status changed: %A" msg)
 
-                UserPage.update msg state.UserPage
+        let userPage, userCmd =
+            let msg =
+                UserPage.SetAuthStatus(newAuthState.AuthStatus)
 
-            let userCmds = Cmd.map UserPage userCmd2
+            UserPage.update msg state.UserPage
+            |> mapCmd UserPage
+
+        match newAuthState.AuthStatus with
+        | Auth0.Authenticated (user, token) ->
 
             let todo, toDoCmd =
-                match newAuthState.Token, newAuthState.AuthState with
-                | Some token, AuthState.Authenticated user ->
-                    let userId = UserId(Auth0.UniqueId user.sub.Value)
-
-                    let msg =
-                        ToDoList.SetApi(ToDoList.toDoApi token, userId)
-
+                    let userId = UserId(user.UniqueId)
+                    let api = ToDoList.toDoApi token
+                    let msg = ToDoList.SetApi(api, userId)
                     ToDoList.update msg state.ToDoList
-                | _ -> ToDoList.update ToDoList.ClearApi state.ToDoList
+                    |> mapCmd ToDo 
 
             let hazop, hazopCmd =
-                match newAuthState.Token, newAuthState.AuthState with
-                | Some token, AuthState.Authenticated _ ->
                     let msg =
                         HazopPage.SetApi(HazopPage.hazopApi token)
 
                     HazopPage.update msg state.HazopPage
-                | _ -> HazopPage.update HazopPage.ClearApi state.HazopPage
+                    |> mapCmd HazopPage
 
             { state with
                 AuthState = newAuthState
@@ -114,29 +114,41 @@ let update msg state =
                 HazopPage = hazop
             },
             Cmd.batch [
-                userCmds
-                (Cmd.map ToDo toDoCmd)
-                (Cmd.map HazopPage hazopCmd)
+                userCmd
+                toDoCmd
+                hazopCmd
             ]
         | _ ->
-            let userPage, userCmd2 =
-                let msg =
-                    UserPage.SetAuthStatus(newAuthState.AuthStatus)
+            let todo, toDoCmd =
+                    ToDoList.update ToDoList.ClearApi state.ToDoList
+                    |> mapCmd ToDo
 
-                UserPage.update msg state.UserPage
-
-            let userCmds = Cmd.map UserPage userCmd2
+            let hazop, hazopCmd =
+                    HazopPage.update HazopPage.ClearApi state.HazopPage
+                    |> mapCmd HazopPage
 
             { state with
                 AuthState = newAuthState
                 UserPage = userPage
+                ToDoList = todo
+                HazopPage = hazop
             },
-            userCmds
+            Cmd.batch [
+                userCmd
+                toDoCmd
+                hazopCmd
+            ]
 
 
     | UserPage msg ->
         let page, cmd = UserPage.update msg state.UserPage
         { state with UserPage = page }, Cmd.map UserPage cmd
     | HazopPage msg ->
-        let page, cmd = HazopPage.update msg state.HazopPage
-        { state with HazopPage = page }, Cmd.map HazopPage cmd
+        match msg with
+        | HazopPage.Msg.Navigation navMsg -> 
+            match navMsg with
+            | HazopPage.NavigateToMsg.ProjectSetup id -> failwith ""
+            | HazopPage.NavigateToMsg.GuidewordSetup id -> failwith ""
+        | _ -> 
+            let page, cmd = HazopPage.update msg state.HazopPage
+            { state with HazopPage = page }, Cmd.map HazopPage cmd

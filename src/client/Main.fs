@@ -18,3 +18,5 @@ importAll "./styles/global.scss"
 Program.mkProgram App.init App.update AppView.Router
 |> Program.withReactBatched "feliz-app"
 |> Program.run
+
+// TODO Suspend commands not active in the view

@@ -17,14 +17,14 @@ type private Msg = AuthStatus.Msg
 [<ReactComponent>]
 let LogIn (state: AuthStatus.State) dispatch =
 
-    // Auth0 Hooks
-    let auth0 = useAuth0 ()
-    let authState = AuthState.OfJsObj(auth0 :> IAuthState)
-
     let allScopes x =
         match x with
         | [] -> None
         | x -> Some(String.Join(" ", x))
+
+    // Auth0 Hooks
+    let auth0 = useAuth0 ()
+    let authState = AuthState.OfJsObj(auth0 :> IAuthState)
 
     //  https://auth0.com/docs/quickstart/spa/react/02-calling-an-api
     React.useEffect (
@@ -70,7 +70,10 @@ let LogIn (state: AuthStatus.State) dispatch =
                 | _ -> ()
             else
                 ()),
-        [| state.AuthState :> obj; state.Token :> _ |]
+        [|
+            state.AuthState :> obj
+            state.Token :> _
+        |]
     )
 
     if state.AuthState <> authState then

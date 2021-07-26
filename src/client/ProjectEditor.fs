@@ -4,7 +4,7 @@ module FelizServerless.HazopProject
 open FelizServerless.Hazop
 
 type SubPage = 
-    | GuidewordSetEditor of GuidewordSetEditor.State
+    | GuidewordSetEditor of GuidewordSetsEditor.State
 
 type ProjectViewState =
     {
@@ -14,7 +14,7 @@ type ProjectViewState =
         Company: HazopCompany.State
         Documents: Document list
         Systems: System list
-        GuidewordSets: GuidewordSetEditor.State list
+        GuidewordSets: GuidewordSetsEditor.State
         SubPage: SubPage option
     }
     member this.ToProject() : Project =
@@ -25,7 +25,7 @@ type ProjectViewState =
             Company = this.Company.ToCompany()
             Documents = this.Documents
             Systems = this.Systems
-            GuidewordSets = this.GuidewordSets |> List.map (fun x -> x.ToGuidewordSet())
+            GuidewordSets = this.GuidewordSets.ToGuidewordSets()
         }
 
     static member OfProject(project: Project) : ProjectViewState =
@@ -36,7 +36,7 @@ type ProjectViewState =
             Company = HazopCompany.State.OfCompany project.Company
             Documents = project.Documents
             Systems = project.Systems
-            GuidewordSets = project.GuidewordSets |> List.map GuidewordSetEditor.init
+            GuidewordSets = GuidewordSetsEditor.init project.GuidewordSets
             SubPage = None
         }
 
@@ -48,9 +48,8 @@ let init project : State =
     |> ProjectViewState.OfProject
     |> Editor.create
 
-[<RequireQualifiedAccess>]
 type SubPageMsg = 
-    | GuidewordSetEditor
+    | GuidewordSetEditorMsg
 
 type Msg =
     | TitleChanged of string
@@ -58,7 +57,7 @@ type Msg =
     | CompanyChanged of HazopCompany.State
     | DocumentsChanged of Document list
     | SystemsChanged of System list
-    | GuidewordSetsChanged of GuidewordSetEditor.State list
+    | GuidewordSetsChanged of GuidewordSetsEditor.Msg
     | Save //Intended as external message at the next level to bubble a request to save
     | CompanyView of HazopCompany.Msg
     | Revert
@@ -82,9 +81,11 @@ let update msg state : State =
     | SystemsChanged systems ->
         state
         |> Editor.map (fun project -> { project with Systems = systems })
-    | GuidewordSetsChanged gwSets ->
+    | GuidewordSetsChanged gwSetMsg ->
         state
-        |> Editor.map (fun project -> { project with GuidewordSets = gwSets })
+        |> Editor.map (fun project -> 
+            let guidewordSets = GuidewordSetsEditor.update gwSetMsg project.GuidewordSets
+            { project with GuidewordSets = guidewordSets })
     | CompanyView msg ->
 
         let updateCompany project =
@@ -95,9 +96,13 @@ let update msg state : State =
 
     | Save _ -> state |> Editor.makePending
     | Revert -> state |> Editor.clean
-    | OpenSubPage subPage -> state
-        // match subPage with
-        // | SubPageMsg.GuidewordSetEditor -> 
-        //     let gwSubPage = GuidewordSetEditor.init
-        //     state |> Editor.map (fun state -> { state with SubPage = Some gwSubPage })
+    | OpenSubPage subPage -> //state
+        match subPage with
+        | SubPageMsg.GuidewordSetEditorMsg -> 
+            let gwSubPage = 
+                match state with
+                | Working (Clean state) -> Some (GuidewordSetEditor state.GuidewordSets)
+                | _ -> None
+                
+            state |> Editor.map (fun state -> { state with SubPage = gwSubPage })
     | CloseSubPage -> state |> Editor.map (fun state -> { state with SubPage = None })

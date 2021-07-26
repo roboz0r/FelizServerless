@@ -7,6 +7,7 @@ open Feliz.MaterialUI
 
 type private State = App.State
 type private Msg = App.Msg
+module HazopPageView = HazopPageView2
 
 let private useStyles : unit -> App.Styles =
     Styles.makeStyles
@@ -81,7 +82,7 @@ let AppBar (styles: App.Styles) (state: App.State) dispatch =
                     | [ "users"; Route.Int userId ] -> (sprintf "User ID %d" userId)
                     | [ "ToDo" ] -> "To Do List"
                     | [ "DevEnv" ] -> "Development Environment"
-                    | [ "Hazop" ] -> "Hazop Study"
+                    | "Hazop" :: _ -> "Hazop Study"
                     | _ -> "Not found"
                     |> typography.children
                 ]
@@ -111,6 +112,7 @@ let MainView (drawerStyles: Drawer.Styles) (styles: App.Styles) (state: App.Stat
                 | [ "DevEnv" ] -> DevEnvView.View()
                 | [ "ToDo" ] -> ToDoListView.View state.ToDoList (Msg.ToDo >> dispatch)
                 | [ "Hazop" ] -> HazopPageView.View state.HazopPage (Msg.HazopPage >> dispatch)
+                | [ "Hazop"; Route.Guid projectId; name ] -> Mui.typography name
                 | _ -> Html.h1 "Not found"
             ]
         ]

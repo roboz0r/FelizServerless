@@ -23,6 +23,12 @@ type Editor<'T, 'TError> =
         | Working (Clean _) -> true
         | _ -> false
 
+[<RequireQualifiedAccess>]
+type EditorMsg<'Msg, 'TError> = 
+    | Changed of 'Msg
+    | Errored of 'TError
+    | Clean
+
 module Editor =
     let create clean = Working(Clean clean)
 
@@ -86,3 +92,25 @@ module Editor =
         | Working x -> EditorError(x, err)
         | Pending x -> EditorError(x, err)
         | EditorError (x, _) -> EditorError(x, err)
+
+    // let update updater (msg:EditorMsg<'Msg,'TError>) (editorState:Editor<'T,'TError>) = 
+    //     match msg with 
+    //     | EditorMsg.Changed msg -> 
+
+    //         match editorState with
+    //         | Working (Clean state) ->
+    //             let newState = updater msg state
+    //             if newState = state then
+    //                 Working(Clean newState)
+    //             else
+    //                 Working(Dirty {| Clean = state; Current = newState |})
+    //         | Working (Dirty state) ->
+    //             let newState = updater msg state.Current
+    //             if newState = state.Clean then
+    //                 Working(Clean newState)
+    //             else
+    //                 Working(Dirty {| state with Current = newState |})
+    //         | Pending state -> Pending state
+    //         | EditorError (state, err) -> EditorError(state, err)
+    //     | EditorMsg.Errored err -> makeError err editorState
+    //     | EditorMsg.Clean -> clean editorState

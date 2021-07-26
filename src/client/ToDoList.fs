@@ -4,11 +4,13 @@ module FelizServerless.ToDoList
 open System
 open Elmish
 
+let private console = Fable.Core.JS.console
+
 type ToDoError = { Id: ToDoId; Message: string }
 
 type State =
     {
-        Items: Deferred<Result<ToDoItem, ToDoError>, ToDoItem> list
+        Items: Deferred<Result<ToDoItem list, ToDoError>>
         NewItemText: string
         NewItemId: ToDoId
         ToDoApi: IToDoItem option
@@ -17,7 +19,7 @@ type State =
 
 let init () =
     {
-        Items = []
+        Items = HasNotStartedYet
         NewItemText = ""
         NewItemId = Guid.NewGuid()
         ToDoApi = None
@@ -41,46 +43,52 @@ let toDoApi =
     AuthStatus.createAuthenticatedApi<IToDoItem>
 
 let update msg state : State * Cmd<_> =
+    let map = (List.map >> Result.map >> Deferred.map)
 
     let mapError id =
         Result.mapError (fun (x: ServerError) -> { Id = id; Message = sprintf "%A" x })
 
     match msg with
     | Add item ->
+        match state.ToDoApi, state.Items with
+        | Some api, Resolved (Ok items) ->
 
-        { state with
-            Items = (InProgress item) :: state.Items
-            NewItemText = ""
-            NewItemId = Guid.NewGuid()
-        },
-        match state.ToDoApi with
-        | Some api -> Cmd.OfAsync.perform api.Add item (mapError item.Id >> ResolveAdd)
-        | None -> Cmd.none
-    | ResolveAdd res ->
-        { state with
-            Items =
+            { state with
+                Items = InProgress(Ok(item :: items))
+                NewItemText = ""
+                NewItemId = Guid.NewGuid()
+            },
+            Cmd.OfAsync.perform api.Add item (mapError item.Id >> ResolveAdd)
+        | _ -> state, Cmd.none
+    | ResolveAdd result ->
+        let items =
+            match result with
+            | Ok (oldId, newId) ->
+
+
                 state.Items
-                |> List.map
-                    (fun x ->
-                        match x, res with
-                        | InProgress x, Ok (oldId, newId) when x.Id = oldId -> Resolved(Ok { x with Id = newId })
-                        | InProgress x, Error y when x.Id = y.Id -> Resolved(Error y)
-                        | _ -> x)
-        },
-        Cmd.none
+                |> map
+                    (fun item ->
+                        if item.Id = oldId then
+                            { item with Id = newId }
+                        else
+                            item)
+            | Error err -> err |> Error |> Resolved
+
+        { state with Items = items }, Cmd.none
+
     | Update item ->
-        { state with
-            Items =
-                state.Items
-                |> List.map
-                    (fun x ->
-                        match x with
-                        | Resolved (Ok x) when x.Id = item.Id -> InProgress item
-                        | Resolved (Error x) when x.Id = item.Id -> InProgress item
-                        | _ -> x)
-        },
-        match state.ToDoApi with
-        | Some api ->
+        match state.ToDoApi, state.Items with
+        | Some api, Resolved (Ok items) ->
+            { state with
+                Items =
+                    items
+                    |> List.map
+
+                        (fun x -> if x.Id = item.Id then item else x)
+                    |> Ok
+                    |> InProgress
+            },
             Cmd.OfAsync.perform
                 api.Update
                 item
@@ -88,79 +96,98 @@ let update msg state : State * Cmd<_> =
                  >> Result.map (fun _ -> item)
                  >> Resolve)
 
-        | None -> Cmd.none
-    | Resolve item ->
-        { state with
-            Items =
-                state.Items
-                |> List.map
-                    (fun x ->
-                        match x, item with
-                        | InProgress x, Ok y when x.Id = y.Id -> Resolved item
-                        | InProgress x, Error y when x.Id = y.Id -> Resolved item
-                        | _ -> x)
-        },
-        Cmd.none
+        | _ -> state, Cmd.none
+    | Resolve result ->
+        match result, state.Items with
+        | Ok item, InProgress (Ok items) ->
+            { state with
+                Items = Resolved(Ok items)
+            },
+            Cmd.none
+        | Error err, _ ->
+            { state with
+                Items = Resolved(Error err)
+            },
+            Cmd.none
+        | Ok item, _ ->
+            { state with
+                Items =
+                    Resolved(
+                        Error
+                            {
+                                Id = item.Id
+                                Message = "Invalid state detected"
+                            }
+                    )
+            },
+            Cmd.none
     | Remove id ->
-        let mutable sendCmd = false
-
-        { state with
-            Items =
-                state.Items
-                |> List.choose
-                    (fun x ->
-                        match x with
-                        | Resolved (Ok x) when x.Id = id ->
-                            sendCmd <- true
-                            Some(InProgress x)
-                        | Resolved (Error x) when x.Id = id -> None
-                        | _ -> Some x)
-        },
-        match state.ToDoApi, sendCmd with
-        | Some api, true ->
+        match state.ToDoApi, state.Items with
+        | Some api, Resolved (Ok items) ->
+            { state with
+                Items =
+                    items
+                    |> List.filter (fun x -> not (x.Id = id))
+                    |> Ok
+                    |> InProgress
+            },
             Cmd.OfAsync.perform
                 api.Delete
                 id
                 (Result.mapError (fun x -> { Id = id; Message = (sprintf "%A" x) })
                  >> ResolveRemove)
 
-        | _ -> Cmd.none
-
+        | _ -> state, Cmd.none
     | NewItemChanged s -> { state with NewItemText = s }, Cmd.none
     | SetApi (api, userId) ->
         { state with
             ToDoApi = Some api
             UserId = Some userId
-            Items = []
+            Items = FirstLoad
             NewItemText = ""
             NewItemId = Guid.NewGuid()
         },
+        Cmd.none
 
-        Cmd.OfAsync.perform
-            api.List
-            ()
-            (function
-            | Ok x -> SetItems x
-            | Error err ->
-                Fable.Core.JS.console.log (sprintf "Error getting ToDoItem List: %A" err)
-                SetItems [])
+    //TODO Make it only call list if has focus
+    // Cmd.OfAsync.perform
+    //     api.List
+    //     ()
+    //     (function
+    //     | Ok x -> SetItems x
+    //     | Error err ->
+    //         Fable.Core.JS.console.log (sprintf "Error getting ToDoItem List: %A" err)
+    //         SetItems [])
     | ClearApi -> init (), Cmd.none
     | SetItems items ->
-        let items' = items |> List.map (Ok >> Resolved)
+        let items' = items |> Ok |> Resolved
         { state with Items = items' }, Cmd.none
-    | ResolveRemove resp ->
-        let items =
-            state.Items
-            |> List.choose
-                (fun x ->
-                    match x, resp with
-                    | InProgress x, Error y when x.Id = y.Id -> Some(Resolved(Error y))
-                    | InProgress x, Ok id when x.Id = id -> None
-                    | _ -> Some x)
-
-        { state with Items = items }, Cmd.none
+    | ResolveRemove result ->
+        match result, state.Items with
+        | Ok id, InProgress (Ok items) ->
+            { state with
+                Items = Resolved(Ok items)
+            },
+            Cmd.none
+        | Error err, _ ->
+            { state with
+                Items = Resolved(Error err)
+            },
+            Cmd.none
+        | Ok id, _ ->
+            { state with
+                Items =
+                    Resolved(
+                        Error
+                            {
+                                Id = id
+                                Message = "Invalid state detected"
+                            }
+                    )
+            },
+            Cmd.none
     | RefreshList ->
-        { state with Items = [] },
+        { state with Items = FirstLoad },
         match state.ToDoApi with
         | Some api ->
             Cmd.OfAsync.perform
@@ -169,6 +196,6 @@ let update msg state : State * Cmd<_> =
                 (function
                 | Ok x -> SetItems x
                 | Error err ->
-                    Fable.Core.JS.console.log (sprintf "Error getting ToDoItem List: %A" err)
+                    console.log (sprintf "Error getting ToDoItem List: %A" err)
                     SetItems [])
         | None -> Cmd.none

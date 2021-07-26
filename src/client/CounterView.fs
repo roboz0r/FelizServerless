@@ -30,4 +30,5 @@ let Counter (state: Counter.State) dispatch =
         Html.div [
             Mui.typography "Counter not started."
         ]
+    | FirstLoad -> Html.div [ Mui.typography "Loading..." ]
     | InProgress _ -> Html.div [ Mui.typography "Loading..." ]

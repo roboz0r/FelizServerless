@@ -150,11 +150,21 @@ type Project =
         GuidewordSets: GuidewordSet list
     }
 
+
+type ProjectSummary =
+    {
+        Id: ProjectId
+        Title: string
+        Description: string
+    }
+    
+
 type HazopError = HazopError of string
 
 type IHazopProject =
     {
         List: unit -> Async<Result<Project list, HazopError>>
+        ListSummary: unit -> Async<Result<ProjectSummary list, HazopError>>
         Add: Project -> Async<Result<ProjectId * ProjectId, HazopError>>
         Update: Project -> Async<Result<ProjectId, HazopError>>
         Delete: ProjectId -> Async<Result<ProjectId, HazopError>>

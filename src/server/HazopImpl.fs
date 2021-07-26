@@ -10,6 +10,15 @@ open FelizServerless.Server.Cosmos
 
 module HazopProject =
 
+    module ProjectSummary =
+        let summarise (project:Project):ProjectSummary = 
+            {
+                Id = project.Id
+                Title = project.Title
+                Description = project.Description
+            }
+
+
     type CosmosUserId = string
 
     type UserProject =
@@ -101,6 +110,31 @@ module HazopProject =
                 |> List.map (fun x -> x.Project)
                 |> Ok
 
+
+            let summaryQry (container: Container) =
+
+                let options =
+                    CosmosLinqSerializerOptions(PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase)
+
+                let qry =
+                    let queryable =
+                        container.GetItemLinqQueryable<UserProject>(true, linqSerializerOptions = options)
+
+                    query {
+                        for item in queryable do
+                            where (
+                                (item.UserId) = userId.Value
+                                && item.TypeName = nameof UserProject
+                            )
+
+                            select item
+                    }
+
+                qry
+                |> Seq.toList
+                |> List.map (fun x -> x.Project |> ProjectSummary.summarise)
+                |> Ok
+
             {
                 List =
                     fun _ ->
@@ -108,6 +142,15 @@ module HazopProject =
                             task {
                                 let! container = container ()
                                 return listQry container
+                            }
+                            |> Async.AwaitTask
+                        |> tryProcess
+                ListSummary =
+                    fun _ ->
+                        fun _ ->
+                            task {
+                                let! container = container ()
+                                return summaryQry container
                             }
                             |> Async.AwaitTask
                         |> tryProcess
@@ -169,6 +212,7 @@ module HazopProject =
 
             {
                 List = returnError err
+                ListSummary = returnError err
                 Add = returnError err
                 Update = returnError err
                 Delete = returnError err

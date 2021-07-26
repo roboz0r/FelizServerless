@@ -18,3 +18,11 @@ type Mui
             yield! props
         ]
 
+    static member loadingDialog = 
+            Mui.dialog [
+                dialog.disableBackdropClick true
+                dialog.open' true
+                dialog.children [
+                    Mui.dialogTitle "Loading..."
+                ]
+            ]

@@ -7,13 +7,13 @@ open Feliz.MaterialUI
 [<ReactComponent>]
 let View (state: UserPage.State) dispatch =
     match state.AuthStatus, state.Claims with
-    | AuthStatus.AuthWDetails (user, _, userDetails), None ->
+    | Auth0.Authenticated (user, _), None ->
         Mui.container [
-            Mui.typography ($"Name: {userDetails.Name}")
-            Mui.typography ($"Email: {userDetails.Email}")
-            Mui.typography ($"No Token")
+            Mui.typography ($"Name: {user.Details |> Option.map (fun x -> x.Name) |> String.OfOption}")
+            Mui.typography ($"Email: {user.Details |> Option.map (fun x -> x.Email) |> String.OfOption}")
+            Mui.typography ($"Claims not loaded")
         ]
-    | AuthStatus.AuthWDetails (user, _, userDetails), Some (Ok claims) ->
+    | Auth0.Authenticated (user, _), Some (Ok claims) ->
 
         let claims' =
             [
@@ -27,12 +27,12 @@ let View (state: UserPage.State) dispatch =
             ]
 
         Mui.container [
-            Mui.typography ($"Name: {userDetails.Name}")
-            Mui.typography ($"Email: {userDetails.Email}")
+            Mui.typography ($"Name: {user.Details |> Option.map (fun x -> x.Name) |> String.OfOption}")
+            Mui.typography ($"Email: {user.Details |> Option.map (fun x -> x.Email) |> String.OfOption}")
             yield! claims' |> List.map Mui.typography
         ]
 
-    | AuthStatus.AuthWDetails (user, _, userDetails), Some (Error err) ->
+    | Auth0.Authenticated (user, _), Some (Error err) ->
 
         let errMsg =
             match err with
@@ -42,8 +42,8 @@ let View (state: UserPage.State) dispatch =
             | OtherJwtError s -> s
 
         Mui.container [
-            Mui.typography ($"Name: {userDetails.Name}")
-            Mui.typography ($"Email: {userDetails.Email}")
+            Mui.typography ($"Name: {user.Details |> Option.map (fun x -> x.Name) |> String.OfOption}")
+            Mui.typography ($"Email: {user.Details |> Option.map (fun x -> x.Email) |> String.OfOption}")
             Mui.typography errMsg
         ]
 

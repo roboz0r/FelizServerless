@@ -11,6 +11,7 @@
     <Compile Include="Mime.fs" />
     <Compile Include="Deferred.fs" />
     <Compile Include="Editor.fs" />
+    <Compile Include="EditorView.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="MuiExtensions.fs" />
     <Compile Include="Scope.fs" />
@@ -27,6 +28,8 @@
     <Compile Include="GuidewordEditorView.fs" />
     <Compile Include="GuidewordSetEditor.fs" />
     <Compile Include="GuidewordSetEditorView.fs" />
+    <Compile Include="GuidewordSetsEditor.fs" />
+    <Compile Include="GuidewordSetsEditorView.fs" />
     <Compile Include="NewHazopProject.fs" />
     <Compile Include="NewHazopProjectView.fs" />
     <Compile Include="AddressEditor.fs" />
@@ -35,6 +38,10 @@
     <Compile Include="CompanyEditorView.fs" />
     <Compile Include="ProjectEditor.fs" />
     <Compile Include="ProjectEditorView.fs" />
+    <Compile Include="HazopProjectPage.fs" />
+    <Compile Include="HazopProjectPageView.fs" />
+    <Compile Include="HazopPage2.fs" />
+    <Compile Include="HazopPage2View.fs" />
     <Compile Include="HazopPage.fs" />
     <Compile Include="HazopPageView.fs" />
     <Compile Include="UserPage.fs" />

@@ -12,10 +12,8 @@ let View (state: NewHazopProject.State) dispatch =
     Html.div [
         Mui.button [
             prop.onClick (fun _ -> dispatch Msg.OpenDialog)
-            button.children [
-                Mui.typography "Create New Project"
-                addIcon []
-            ]
+            button.children "New Project"
+            button.endIcon (addIcon [])
         ]
         Mui.dialog [
             dialog.open' state.Open
